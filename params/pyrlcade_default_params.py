@@ -33,11 +33,11 @@ qsa_type='tabular'
 
 #decay_type can be 'geometric' or 'linear'
 decay_type='geometric'
-epsilon=0.05
-epsilon_min=0.007
+epsilon=0.20
+epsilon_min=0.01
 epsilon_decay=exp((log(epsilon_min) - log(epsilon))/10000.0)
 #epsilon_decay = (epsilon - epsilon_min)/10000
-gamma=0.99
+gamma=0.995
 tabular_learning_rate=0.4
 
 action_type='e_greedy'
@@ -59,4 +59,4 @@ axis_x_max=10.0
 axis_y_min=-5.5
 axis_y_max=5.5
 fps=60
-
+ale_frame_skip=4

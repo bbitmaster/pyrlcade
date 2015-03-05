@@ -21,15 +21,15 @@ class tabular_ram_qsa(object):
     def store(self,state,action,value):
         s =  state - self.mins
         s /= self.divs
-        s = np.minimum(s,self.arr_mins)
-        s = np.maximum(s,self.arr_maxs)
+        s = np.minimum(s,self.arr_maxs)
+        s = np.maximum(s,self.arr_mins)
         self.data[action][tuple(s)] = value
 
     def update(self,state,action,value):
         s =  state - self.mins
         s /= self.divs
-        s = np.minimum(s,self.arr_mins)
-        s = np.maximum(s,self.arr_maxs)
+        s = np.minimum(s,self.arr_maxs)
+        s = np.maximum(s,self.arr_mins)
         d = self.data[action][tuple(s)]
         self.data[action][tuple(s)] = d + self.alpha*(value - d)
         #above can also be expressed as:

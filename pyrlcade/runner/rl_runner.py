@@ -17,7 +17,7 @@ class rl_runner(object):
    
         #initialize environment
         self.sim = pyrlcade_environment()
-        self.sim.init(p['rom_file'])
+        self.sim.init(p['rom_file'],p['ale_frame_skip'])
 
         #initialize hyperparameters fresh, unless we are resuming a saved simulation
         #in which case, we load the parameters
@@ -38,7 +38,7 @@ class rl_runner(object):
             #only import if we need it, since we don't want to require installation of pygame
             from pyrlcade.vis.visualize_sdl import visualize_sdl
             v = visualize_sdl()
-            v.init_vis(p['display_width'],p['display_height'],p['axis_x_min'],p['axis_x_max'],p['axis_y_min'],p['axis_y_max'],p['fps'])
+            v.init_vis(p)
 
         print_update_timer = time.time()
         start_time = time.time()
@@ -92,6 +92,13 @@ class rl_runner(object):
                     self.stats = {}
                     self.stats['action'] = self.a
                     self.stats['total_reward'] = self.r_sum
+                    disp_state = np.copy(self.s)
+                    disp_state = disp_state - self.qsa.mins
+                    disp_state /= self.qsa.divs
+                    disp_state = np.minimum(disp_state,self.qsa.arr_maxs)
+                    disp_state = np.maximum(disp_state,self.qsa.arr_mins)
+
+                    self.stats['state'] = np.copy(disp_state)
                     #show full episode for episodes that don't fast forward
                     if not (self.episode % self.showevery):
                         self.fast_forward = False

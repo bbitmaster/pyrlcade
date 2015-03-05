@@ -4,12 +4,13 @@ import sys
 from ale_python_interface import ALEInterface
 
 class pyrlcade_environment(object):
-    def init(self,rom_file):
+    def init(self,rom_file,ale_frame_skip):
 
         self.ale = ALEInterface()
 
         self.max_frames_per_episode = self.ale.getInt("max_num_frames_per_episode");
         self.ale.set("random_seed",123)
+        self.ale.set("frame_skip",ale_frame_skip)
 
         self.ale.loadROM(rom_file)
         self.legal_actions = self.ale.getMinimalActionSet()

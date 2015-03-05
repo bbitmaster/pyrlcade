@@ -10,7 +10,6 @@ class visualize_sdl(object):
         (display_width,display_height) = (1024,420)
         self.screen = pygame.display.set_mode((display_width,display_height))
         pygame.display.set_caption("Arcade Learning Environment Agent Display")
-        self.screen = pygame.display.set_mode((display_width,display_height))
         self.game_surface = None
 
         self.clock = pygame.time.Clock()
@@ -83,14 +82,20 @@ class visualize_sdl(object):
         #display current action
         if(stats is not None):
             font = pygame.font.SysFont("Ubuntu Mono",32)
-            text = font.render("Current Action: " + str(a) ,1,(208,208,255))
+            text = font.render("Current Action: " + str(stats['action']) ,1,(208,208,255))
             height = font.get_height()*1.2
             self.screen.blit(text,(330,line_pos))
             line_pos += height
 
             #display reward
             font = pygame.font.SysFont("Ubuntu Mono",30)
-            text = font.render("Total Reward: " + str(total_reward) ,1,(208,255,255))
+            text = font.render("Total Reward: " + str(stats['total_reward']) ,1,(208,255,255))
+            self.screen.blit(text,(330,line_pos))
+
+            #display state
+            line_pos += height
+            font = pygame.font.SysFont("Ubuntu Mono",25)
+            text = font.render("State: " + str(stats['state']) ,1,(208,208,255))
             self.screen.blit(text,(330,line_pos))
 
         pygame.display.flip()
