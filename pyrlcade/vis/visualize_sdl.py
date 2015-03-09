@@ -7,7 +7,7 @@ from ale_python_interface import ALEInterface
 class visualize_sdl(object):
     def init_vis(self,p):
         pygame.init()
-        (display_width,display_height) = (1024,420)
+        (display_width,display_height) = (1280,720)
         self.screen = pygame.display.set_mode((display_width,display_height))
         pygame.display.set_caption("Arcade Learning Environment Agent Display")
         self.game_surface = None
@@ -55,7 +55,7 @@ class visualize_sdl(object):
         numpy_surface = np.frombuffer(self.game_surface.get_buffer(),dtype=np.int32)
         ale.getScreenRGB(numpy_surface)
         del numpy_surface
-        self.screen.blit(pygame.transform.scale2x(self.game_surface),(0,0))
+        self.screen.blit(pygame.transform.scale(self.game_surface,(self.game_surface.get_width()*3,self.game_surface.get_height()*3)),(0,0))
 
         #get RAM
         ram_size = ale.getRAMSize()
@@ -65,7 +65,7 @@ class visualize_sdl(object):
         #Display ram bytes
         font = pygame.font.SysFont("Ubuntu Mono",32)
         text = font.render("RAM: " ,1,(255,208,208))
-        self.screen.blit(text,(330,10))
+        self.screen.blit(text,(490,10))
 
         font = pygame.font.SysFont("Ubuntu Mono",25)
         height = font.get_height()*1.2
@@ -75,7 +75,7 @@ class visualize_sdl(object):
         while(ram_pos < 128):
             ram_string = ''.join(["%02X "%ram[x] for x in range(ram_pos,min(ram_pos+16,128))])
             text = font.render(ram_string,1,(255,255,255))
-            self.screen.blit(text,(340,line_pos))
+            self.screen.blit(text,(500,line_pos))
             line_pos += height
             ram_pos +=16
         
@@ -84,68 +84,68 @@ class visualize_sdl(object):
             font = pygame.font.SysFont("Ubuntu Mono",32)
             text = font.render("Current Action: " + str(stats['action']) ,1,(208,208,255))
             height = font.get_height()*1.2
-            self.screen.blit(text,(330,line_pos))
+            self.screen.blit(text,(490,line_pos))
             line_pos += height
 
             #display reward
             font = pygame.font.SysFont("Ubuntu Mono",30)
             text = font.render("Total Reward: " + str(stats['total_reward']) ,1,(208,255,255))
-            self.screen.blit(text,(330,line_pos))
+            self.screen.blit(text,(490,line_pos))
 
             #display state
             line_pos += height
             font = pygame.font.SysFont("Ubuntu Mono",25)
-            text = font.render("State: " + str(stats['state']) ,1,(208,208,255))
-            self.screen.blit(text,(330,line_pos))
+            text = font.render("State: " + ''.join(["%02d "%x for x in stats['state']]),1,(208,208,255))
+            #text = font.render("State: " + str(stats['state']) ,1,(208,208,255))
+            self.screen.blit(text,(490,line_pos))
+
+            #display episodes below game
+            line_pos = 420
+            font = pygame.font.SysFont("Ubuntu Mono",25)
+            text = font.render("Episode: " + str(stats['episode']) ,1,(255,255,255))
+            self.screen.blit(text,(490,line_pos))
+
+            #alpha
+            line_pos += height
+            font = pygame.font.SysFont("Ubuntu Mono",25)
+            text = font.render("Average Reward: " + str(stats['r_sum_avg']) ,1,(255,255,255))
+            self.screen.blit(text,(490,line_pos))
+
+            #alpha
+            line_pos += height
+            font = pygame.font.SysFont("Ubuntu Mono",25)
+            text = font.render("Learning Rate: " + str(stats['learning_rate']) ,1,(255,255,255))
+            self.screen.blit(text,(490,line_pos))
+
+            #gamma
+            line_pos += height
+            font = pygame.font.SysFont("Ubuntu Mono",25)
+            text = font.render("Gamma: " + str(stats['gamma']) ,1,(255,255,255))
+            self.screen.blit(text,(490,line_pos))
+
+            #current epsilon
+            line_pos += height
+            font = pygame.font.SysFont("Ubuntu Mono",25)
+            text = font.render("Epsilon: " + str(stats['epsilon']) ,1,(255,255,255))
+            self.screen.blit(text,(490,line_pos))
+
+            #min epsilon
+            line_pos += height
+            font = pygame.font.SysFont("Ubuntu Mono",25)
+            text = font.render("Epsilon Minimum: " + str(stats['epsilon_min']) ,1,(255,255,255))
+            self.screen.blit(text,(490,line_pos))
+
+            if(stats['fast_forward']):
+                line_pos=30
+                font = pygame.font.SysFont("Ubuntu",100)
+                text = font.render(("FAST FORWARD"),1,(255,64,64))
+                self.screen.blit(text,(300,300))
+
+            if(stats['save_images']):
+                pygame.image.save(self.screen,stats['image_save_dir'] + "frame_" + str(self.framenum) + ".png")
+                self.framenum = self.framenum + 1           
 
         pygame.display.flip()
-
-
-#        if(stats is not None):    
-#            line_pos=30
-#            font = pygame.font.SysFont("Ubuntu Mono",20)
-#            height = font.get_height()*1.2
-#
-#            text = font.render(("Episode: " + str(stats.episode)),1,(255,255,255))
-#            self.screen.blit(text,(30,line_pos))
-#
-#            line_pos += height
-#            text = font.render(("Step: " + str(stats.step)),1,(255,255,255))
-#            self.screen.blit(text,(30,line_pos))
-#
-#            line_pos += height
-#            text = font.render(("Reward: " + str(stats.r)),1,(255,255,255))
-#            self.screen.blit(text,(30,line_pos))
-#
-#            line_pos += height
-#            text = font.render(("Total Reward This Episode: " + str(stats.r_sum)),1,(255,255,255))
-#            self.screen.blit(text,(30,line_pos))
-#
-#            line_pos += height
-#            text = font.render(("Average Reward Per Episode: " + str(stats.r_sum_avg)),1,(255,255,255))
-#            self.screen.blit(text,(30,line_pos))
-#            
-#            line_pos += height
-#            text = font.render(("Current Epsilon: " + str(stats.epsilon)),1,(255,255,255))
-#            self.screen.blit(text,(30,line_pos))
-#
-#            line_pos += height
-#            text = font.render(("Current Gamma: " + str(stats.gamma)),1,(255,255,255))
-#            self.screen.blit(text,(30,line_pos))
-#
-#            line_pos += height
-#            text = font.render(("Current Alpha: " + str(stats.alpha)),1,(255,255,255))
-#            self.screen.blit(text,(30,line_pos))
-#            if(stats.fast_forward):
-#                line_pos=30
-#                font = pygame.font.SysFont("Ubuntu",100)
-#
-#                text = font.render(("FAST FORWARD"),1,(128,255,255))
-#                self.screen.blit(text,(300,300))
-#
-#            if(stats.save_images):
-#                pygame.image.save(self.screen,stats.image_save_dir + "frame_" + str(self.framenum) + ".png")
-#                self.framenum = self.framenum + 1           
 
 
 #this runs a simple keyboard driven test, with no simulator for the cart-pole

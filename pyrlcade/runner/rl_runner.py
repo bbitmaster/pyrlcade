@@ -48,7 +48,8 @@ class rl_runner(object):
         avg_step_duration = 1.0
 
         ##repeat for each episode
-        self.r_sum_avg = -0.95
+        self.r_sum_avg      = 0.0
+        self.r_sum_list     = []
         self.r_sum_avg_list = []
 
         while 1:
@@ -75,7 +76,6 @@ class rl_runner(object):
                 self.r = self.sim.get_reward()
                 self.s_prime = self.ram_extractor_func(self.sim.get_state())
                 self.r_sum += self.r
-                r_list.append(self.r)
 
                 #choose a' from s' using policy derived from Q
                 (self.a_prime,self.qsa_prime_list) = self.choose_action(self.s_prime,p)
@@ -92,6 +92,14 @@ class rl_runner(object):
                     self.stats = {}
                     self.stats['action'] = self.a
                     self.stats['total_reward'] = self.r_sum
+                    self.stats['episode'] = self.episode
+                    self.stats['r_sum_avg'] = self.r_sum_avg
+                    self.stats['learning_rate'] = p['learning_rate']
+                    self.stats['gamma'] = p['gamma']
+                    self.stats['epsilon'] = self.epsilon
+                    self.stats['epsilon_min'] = p['epsilon_min']
+                    self.stats['save_images'] = p['save_images']
+                    self.stats['image_save_dir'] = p['image_save_dir']
                     disp_state = np.copy(self.s)
                     disp_state = disp_state - self.qsa.mins
                     disp_state /= self.qsa.divs
@@ -102,15 +110,19 @@ class rl_runner(object):
                     #show full episode for episodes that don't fast forward
                     if not (self.episode % self.showevery):
                         self.fast_forward = False
-                        v.delay_vis()
+                        self.stats['fast_forward'] = False
+                        if(not p['save_images']):
+                            v.delay_vis()
                         v.draw_pyrlcade(self.sim.ale,self.stats)
                         exit = v.update_vis()
                         if(exit):
                             quit=True
                     #show the every nth step of each episode when fast forwarding
-                    elif(self.step == 0 and not (self.episode % self.fastforwardskip)):
+                    elif(is_terminal and not (self.episode % self.fastforwardskip)):
                         self.fast_forward = True
-                        v.delay_vis()
+                        self.stats['fast_forward'] = True
+                        if(not p['save_images']):
+                            v.delay_vis()
                         v.draw_pyrlcade(self.sim.ale,self.stats)
                         exit = v.update_vis()
                         if(exit):
@@ -121,11 +133,14 @@ class rl_runner(object):
                 if(print_update_timer < time.time() - 1.0 and self.episode > 0):
                     clear()
                     print("Simname: " + str(p['simname']))
+                    print("Version: " + str(p['version']))
                     print("Episodes Elapsed: " + str(self.episode))
                     print("Average Reward Per Episode: " + str(self.r_sum_avg))
                     print("Epsilon: " + str(self.epsilon))
                     print("Epsilon Min: " + str(p['epsilon_min']))
-                    print("Alpha (learning rate): " + str(self.alpha*p['learning_rate']))
+                    print("Gamma: " + str(p['gamma']))
+                    if(p['qsa_type'] == 'tabular'):
+                        print("Alpha (learning rate): " + str(p['learning_rate']))
                     if(p.has_key('learning_rate_decay')):
                         print("Alpha (learning rate) decay: " + str(p['learning_rate_decay']))
                     if(p['action_type'] == 'noisy_qsa'):
@@ -164,6 +179,9 @@ class rl_runner(object):
 
             #compute the number of steps that have a positive reward, as the number of steps that balanced
             self.r_sum_avg = 0.995*self.r_sum_avg + (1.0 - 0.995)*self.r_sum
+
+            self.r_sum_list.append(self.r_sum) 
+            self.r_sum_avg_list.append(self.r_sum_avg) 
             
             if(p['decay_type'] == 'geometric'):
                 self.epsilon = self.epsilon * p['epsilon_decay']
@@ -232,9 +250,11 @@ class rl_runner(object):
         self.results = {}
         #TODO: save neural network weights
         if(p['qsa_type'] == 'tabular'):
-            self.results['qsa_values'] = np.array(self.qsa.data);
-            self.results['state_size'] = np.array(self.qsa.size);
-        self.results['num_actions'] = np.array(self.num_actions);
+            self.results['qsa_values'] = np.array(self.qsa.data)
+            self.results['state_size'] = np.array(self.qsa.size)
+        self.results['r_sum_list'] = np.array(self.r_sum_list)
+        self.results['r_sum_avg_list'] = np.array(self.r_sum_avg_list)
+        self.results['num_actions'] = np.array(self.num_actions)
         self.results['epsilon'] = np.array(self.epsilon)
         self.results['epsilon_decay'] = np.array(self.epsilon_decay)
         self.results['epsilon_min'] = np.array(self.epsilon_min)

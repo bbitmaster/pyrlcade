@@ -4,7 +4,7 @@ runtype='sarsa'
 
 #A handy name for this run. The data file will be given this name as
 #<resultsdir><simname><version>.h5py
-simname = 'pyrlcade_sarsa_test'
+simname = 'pyrlcade_gamma_test'
 version = '1.1'
 results_dir = '../results/'
 
@@ -14,10 +14,10 @@ rom_file='/home/bgoodric/research/python/ale/Arcade-Learning-Environment/roms/po
 #load_name = '../results/cartpole_sarsa_test1.1.h5py'
 
 data_dir = '../data/'
-save_interval = 1*60
+save_interval = 15*60
 
 #run for a total number of episodes
-train_episodes=100000
+train_episodes=10000
 max_steps=10000
 
 use_float32=True
@@ -27,7 +27,7 @@ random_seed = 4;
 learning_rate = 0.4
 
 save_images=False
-image_save_dir="/home/ben/tmp/" #I Guess that underutilized windows partitition with all that storage is good for something...
+image_save_dir="/home/bgoodric/tmp/" #I Guess that underutilized windows partitition with all that storage is good for something...
 
 qsa_type='tabular'
 
@@ -35,9 +35,11 @@ qsa_type='tabular'
 decay_type='geometric'
 epsilon=0.20
 epsilon_min=0.01
-epsilon_decay=exp((log(epsilon_min) - log(epsilon))/10000.0)
+#epsilon_decay=exp((log(epsilon_min) - log(epsilon))/10000.0)
+#print("epsilon_decay: " + str(epsilon_decay))
+epsilon_decay=0.9997
 #epsilon_decay = (epsilon - epsilon_min)/10000
-gamma=0.995
+gamma=0.999
 tabular_learning_rate=0.4
 
 action_type='e_greedy'
