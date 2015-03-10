@@ -8,7 +8,7 @@ simname = 'pyrlcade_nnet_test'
 version = '1.1'
 results_dir = '../results/'
 
-rom_file='/home/bgoodric/research/python/ale/Arcade-Learning-Environment/roms/pong.bin'
+rom_file='/home/bgoodric/research/python/pyrlcade/roms/pong.bin'
 
 #if load_name is set, then the simulation will load this file and resume from there, this is useful for watching the behavior of a trained agent
 #load_name = '../results/cartpole_sarsa_test1.1.h5py'
@@ -17,14 +17,13 @@ data_dir = '../data/'
 save_interval = 15*60
 
 #run for a total number of episodes
-train_episodes=10000
+train_episodes=50000
 max_steps=10000
 
 use_float32=True
 
 random_seed = 4;
-
-learning_rate = 0.01
+initial_r_sum_avg=-21.0
 
 save_images=False
 image_save_dir="/home/bgoodric/tmp/" #I Guess that underutilized windows partitition with all that storage is good for something...
@@ -59,10 +58,9 @@ epsilon=0.20
 epsilon_min=0.01
 #epsilon_decay=exp((log(epsilon_min) - log(epsilon))/10000.0)
 #print("epsilon_decay: " + str(epsilon_decay))
-epsilon_decay=0.9997
+epsilon_decay=0.9998
 #epsilon_decay = (epsilon - epsilon_min)/10000
 gamma=0.999
-tabular_learning_rate=0.4
 
 action_type='e_greedy'
 

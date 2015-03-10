@@ -49,7 +49,7 @@ class rl_runner(object):
         avg_step_duration = 1.0
 
         ##repeat for each episode
-        self.r_sum_avg      = 0.0
+        self.r_sum_avg      = p['initial_r_sum_avg']
         self.r_sum_list     = []
         self.r_sum_avg_list = []
 
@@ -177,12 +177,6 @@ class rl_runner(object):
                 step_duration_timer = time.time()
                 #end step loop
 
-            #compute the number of steps that have a positive reward, as the number of steps that balanced
-            self.r_sum_avg = 0.995*self.r_sum_avg + (1.0 - 0.995)*self.r_sum
-
-            self.r_sum_list.append(self.r_sum) 
-            self.r_sum_avg_list.append(self.r_sum_avg) 
-            
             if(p['decay_type'] == 'geometric'):
                 self.epsilon = self.epsilon * p['epsilon_decay']
                 self.epsilon = max(p['epsilon_min'],self.epsilon)
@@ -197,7 +191,6 @@ class rl_runner(object):
 #                self.alpha = max(p['learning_rate_min']/p['learning_rate'],self.alpha)
 
 
-            #save stuff (TODO: Put this in a save function)
             if(time.time() - save_time > save_interval or save_and_exit == True):
                 print('saving results...')
                 self.save_results(p['results_dir'] + p['simname'] + p['version'] + '.h5py',p)
@@ -205,6 +198,12 @@ class rl_runner(object):
 
             if(quit==True or save_and_exit==True):
                 break;
+
+            #compute the number of steps that have a positive reward, as the number of steps that balanced
+            self.r_sum_avg = 0.995*self.r_sum_avg + (1.0 - 0.995)*self.r_sum
+
+            self.r_sum_list.append(self.r_sum) 
+            self.r_sum_avg_list.append(self.r_sum_avg) 
             self.episode += 1
             #end episode loop
 
