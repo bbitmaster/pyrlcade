@@ -5,6 +5,7 @@ import sys
 import numpy as np
 from pyrlcade.env.pyrlcade_environment import pyrlcade_environment
 from pyrlcade.state.tabular_ram_qsa import tabular_ram_qsa
+from pyrlcade.state.nnet_qsa import nnet_qsa
 from pyrlcade.misc.clear import clear
 from pyrlcade.misc.save_h5py import save_results,load_results
 from pyrlcade.state.q_learning_updater import q_learning_updater
@@ -94,7 +95,7 @@ class rl_runner(object):
                     self.stats['total_reward'] = self.r_sum
                     self.stats['episode'] = self.episode
                     self.stats['r_sum_avg'] = self.r_sum_avg
-                    self.stats['learning_rate'] = p['learning_rate']
+                    self.stats['learning_rate'] = self.alpha
                     self.stats['gamma'] = p['gamma']
                     self.stats['epsilon'] = self.epsilon
                     self.stats['epsilon_min'] = p['epsilon_min']
@@ -139,8 +140,7 @@ class rl_runner(object):
                     print("Epsilon: " + str(self.epsilon))
                     print("Epsilon Min: " + str(p['epsilon_min']))
                     print("Gamma: " + str(p['gamma']))
-                    if(p['qsa_type'] == 'tabular'):
-                        print("Alpha (learning rate): " + str(p['learning_rate']))
+                    print("Alpha (learning rate): " + str(self.alpha))
                     if(p.has_key('learning_rate_decay')):
                         print("Alpha (learning rate) decay: " + str(p['learning_rate_decay']))
                     if(p['action_type'] == 'noisy_qsa'):
@@ -189,14 +189,12 @@ class rl_runner(object):
             elif(p['decay_type'] == 'linear'):
                 self.epsilon = self.epsilon - p['epsilon_decay']
                 self.epsilon = max(p['epsilon_min'],self.epsilon)
-            
-
-            if(p.has_key('learning_rate_decay_type') and p['learning_rate_decay_type'] == 'geometric'):
-                self.alpha = self.alpha * p['learning_rate_decay']
-                self.alpha = max(p['learning_rate_min']/p['learning_rate'],self.alpha)
-            elif(p.has_key('learning_rate_decay_type') and p['learning_rate_decay_type'] == 'linear'):
-                self.alpha = self.alpha - p['learning_rate_decay']
-                self.alpha = max(p['learning_rate_min']/p['learning_rate'],self.alpha)
+#            if(p.has_key('learning_rate_decay_type') and p['learning_rate_decay_type'] == 'geometric'):
+#                self.alpha = self.alpha * p['learning_rate_decay']
+#                self.alpha = max(p['learning_rate_min']/p['learning_rate'],self.alpha)
+#            elif(p.has_key('learning_rate_decay_type') and p['learning_rate_decay_type'] == 'linear'):
+#                self.alpha = self.alpha - p['learning_rate_decay']
+#                self.alpha = max(p['learning_rate_min']/p['learning_rate'],self.alpha)
 
 
             #save stuff (TODO: Put this in a save function)
@@ -301,23 +299,21 @@ class rl_runner(object):
         self.episode = 0
 
         self.num_actions = self.sim.ale.getMinimalActionSet().size
-        #TODO: this should depend on hyperparameters, and should be different for nnet (for normalization)
+
         self.state_ram_extractor = pong_ram_extractor
         self.ram_extractor_func = pong_ram_extractor.pong_ram_extractor
 
+        self.alpha = p['learning_rate']
+        divs = self.state_ram_extractor.divs
+        mins = self.state_ram_extractor.mins
+        maxs = self.state_ram_extractor.maxs
+
         if(p['qsa_type'] == 'tabular'):
             self.qsa = tabular_ram_qsa()
-            divs = self.state_ram_extractor.divs
-            mins = self.state_ram_extractor.mins
-            maxs = self.state_ram_extractor.maxs
-
-            self.alpha = p['learning_rate']
             self.qsa.init(mins,maxs,divs,self.num_actions,self.alpha)
-        #elif(p['qsa_type'] == 'nnet'):
-        #    self.qsa = nnet_qsa()
-        #    self.qsa.init(self.state_min,self.state_max,self.num_actions,p)
-        #   #The neural network has its own internal learning rate (alpha is ignored)
-        #    self.alpha = 1.0
+        elif(p['qsa_type'] == 'nnet'):
+            self.qsa = nnet_qsa()
+            self.qsa.init(mins,maxs,divs,self.num_actions,p)
 
         self.qsa_learner = q_learning_updater()
         self.qsa_learner.init(self.qsa,self.gamma) 
