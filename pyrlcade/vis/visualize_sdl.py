@@ -99,8 +99,14 @@ class visualize_sdl(object):
             #text = font.render("State: " + str(stats['state']) ,1,(208,208,255))
             self.screen.blit(text,(490,line_pos))
 
+            #display state
+            if(stats.has_key('nnet_state')):
+                line_pos += height
+                font = pygame.font.SysFont("Ubuntu Mono",20)
+                text = font.render("NNet state: " + ''.join(["%03.3f "%x for x in stats['nnet_state']]),1,(208,208,255))
+                self.screen.blit(text,(490,line_pos))
+
             #display episodes below game
-            line_pos = 420
             font = pygame.font.SysFont("Ubuntu Mono",25)
             text = font.render("Episode: " + str(stats['episode']) ,1,(255,255,255))
             self.screen.blit(text,(490,line_pos))

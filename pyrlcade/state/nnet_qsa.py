@@ -70,6 +70,14 @@ class nnet_qsa(object):
         #with learning rate it becomes: -alpha(r + gamma*qsa_max - qsa)
         #then, the target becomes the temporal difference update of:
         #qsa - alpha(r + gamma*qsa_max - qsa)
+
+        #err = (output - target)
+        #err = qsa - alpha(r + gamma*qsa_max - qsa)
+        #err = -alpha(r + gamma*qsa_max - qsa)
+        #err = -(r + gamma*qsa_max - qsa)
+        #err = -(value - qsa)
+        #err = -(value - net.output)
+        #print('update output: ' + str(net.output))
         self.net.error = -(value - self.net.output)
 
         self.net.back_propagate()

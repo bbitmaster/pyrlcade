@@ -108,6 +108,8 @@ class rl_runner(object):
                     disp_state = np.maximum(disp_state,self.qsa.arr_mins)
 
                     self.stats['state'] = np.copy(disp_state)
+                    if(p['qsa_type'] == 'nnet'):
+                        self.stats['nnet_state'] = np.copy(self.qsa.net.input)
                     #show full episode for episodes that don't fast forward
                     if not (self.episode % self.showevery):
                         self.fast_forward = False
