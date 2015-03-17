@@ -2,34 +2,29 @@
 import numpy as np
 
 class tabular_ram_qsa(object):
-    def init(self,mins,maxs,divs,num_actions,alpha):
-        self.alpha = alpha
+    def init(self,mins,maxs,num_actions,p):
+        self.alpha = p['learning_rate']
         self.num_actions = num_actions
-        self.mins = np.array(mins)
-        self.maxs = np.array(maxs)
+        self.mins = np.copy(np.array(mins)).astype(np.int64)
+        self.maxs = np.copy(np.array(maxs)).astype(np.int64)
         self.size = self.maxs - self.mins
-        self.divs = np.array(divs)
-        self.size = self.size + self.divs
-        self.size = self.size/self.divs
 
-        self.arr_mins = (np.zeros(self.size.shape)).astype(np.int64)
-        self.arr_maxs = (self.size - np.ones(self.size.shape)).astype(np.int64)
+        #self.arr_mins = (np.zeros(self.size.shape)).astype(np.int64)
+        #self.arr_maxs = (self.size - np.ones(self.size.shape)).astype(np.int64)
         self.data = []
         for a in range(self.num_actions):
-            self.data.append(-np.random.random(self.size)/100.0)
+            self.data.append(-np.random.random(self.size + np.ones(self.size.shape))/100.0)
 
     def store(self,state,action,value):
         s =  state - self.mins
-        s /= self.divs
-        s = np.minimum(s,self.arr_maxs)
-        s = np.maximum(s,self.arr_mins)
+        s = np.minimum(s,self.maxs)
+        s = np.maximum(s,self.mins)
         self.data[action][tuple(s)] = value
 
     def update(self,state,action,value):
         s =  state - self.mins
-        s /= self.divs
-        s = np.minimum(s,self.arr_maxs)
-        s = np.maximum(s,self.arr_mins)
+        s = np.minimum(s,self.maxs)
+        s = np.maximum(s,self.mins)
         d = self.data[action][tuple(s)]
         self.data[action][tuple(s)] = d + self.alpha*(value - d)
         #above can also be expressed as:
@@ -37,10 +32,8 @@ class tabular_ram_qsa(object):
 
     def load(self,state,action):
         s =  state - self.mins
-        s /= self.divs
-        s = np.minimum(s,self.arr_maxs)
-        s = np.maximum(s,self.arr_mins)
-        #print("divs: " + str(self.divs))
+        s = np.minimum(s,self.maxs)
+        s = np.maximum(s,self.mins)
         #print("s: " + str(s))
         #print("self.data[action].shape: " + str(self.data[action].shape))
         return self.data[action][tuple(s)]
@@ -48,13 +41,12 @@ class tabular_ram_qsa(object):
 if __name__ == '__main__':
     mins = [10,20,30,40]
     maxs = [100,100,100,100]
-    divs = [1,1,4,1]
 
     print("mins 10,20,30,40   maxs 100,100,100,100 actions: 4")
     print("initializaing discrete states with 0.0")
 
     qsa = tabular_ram_qsa()
-    qsa.init(mins,maxs,divs,4)
+    qsa.init(mins,maxs,4)
 
     print("storing 2.0 into state 11,21,31,41 action:0")
     state = [99,21,31,41]

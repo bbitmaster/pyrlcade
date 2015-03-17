@@ -5,11 +5,11 @@ import sys
 import numpy as np
 from pyrlcade.env.pyrlcade_environment import pyrlcade_environment
 from pyrlcade.state.tabular_ram_qsa import tabular_ram_qsa
-from pyrlcade.state.nnet_qsa import nnet_qsa
+from pyrlcade.state.cluster_nnet_qsa import nnet_qsa #TODO remove nnet_qsa.py and rename
 from pyrlcade.misc.clear import clear
 from pyrlcade.misc.save_h5py import save_results,load_results
 from pyrlcade.state.q_learning_updater import q_learning_updater
-import pyrlcade.state.pong_ram_extractor as pong_ram_extractor
+from pyrlcade.state.pong_ram_extractor import pong_ram_extractor
 
 class rl_runner(object):
     def run_sim(self,p):
@@ -20,12 +20,7 @@ class rl_runner(object):
         self.sim = pyrlcade_environment()
         self.sim.init(p['rom_file'],p['ale_frame_skip'])
 
-        #initialize hyperparameters fresh, unless we are resuming a saved simulation
-        #in which case, we load the parameters
-        if(not p.has_key('load_name')):
-            self.init_sim(p)
-        else:
-            self.load_sim(p)
+        self.init_sim(p)
 
         self.do_vis = p['do_vis']
         self.save_images = p.get('save_images',False)
@@ -34,6 +29,8 @@ class rl_runner(object):
 
         self.showevery = p['showevery']
         self.fastforwardskip = 5
+
+        self.reward_multiplier = p['reward_multiplier']
 
         if(self.do_vis):
             #only import if we need it, since we don't want to require installation of pygame
@@ -57,7 +54,7 @@ class rl_runner(object):
             self.step = 0 
             ##initialize s
             self.sim.reset_state()
-            self.s = self.ram_extractor_func(self.sim.get_state())
+            self.s = self.state_ram_extractor.extract_state(self.sim.get_state())
             #choose a from s using policy derived from Q
             (self.a,self.qsa_tmp) = self.choose_action(self.s,p);
 
@@ -75,7 +72,7 @@ class rl_runner(object):
                 is_terminal = self.sim.step()
                 #print("Terminal: " + str(self.sim.is_terminal))
                 self.r = self.sim.get_reward()
-                self.s_prime = self.ram_extractor_func(self.sim.get_state())
+                self.s_prime = self.state_ram_extractor.extract_state(self.sim.get_state())
                 self.r_sum += self.r
 
                 #choose a' from s' using policy derived from Q
@@ -84,7 +81,8 @@ class rl_runner(object):
                 #Q(s,a) <- Q(s,a) + alpha[r + gamma*Q(s_prime,a_prime) - Q(s,a)]
                 #todo: qsa_prime can be saved and reused for qsa_tmp
                 #qsa_tmp = self.qsa.load(self.s,self.a)
-                self.qsa_learner.update(self.s,self.a,self.r,self.s_prime,self.a_prime,self.qsa_prime_list)
+                given_reward = self.r*self.reward_multiplier
+                self.qsa_learner.update(self.s,self.a,given_reward,self.s_prime,self.a_prime,self.qsa_prime_list)
                 #self.qsa_learner.store(self.s,self.a,self.qsa_tmp +  \
                 #    self.alpha*(self.r + self.gamma*self.qsa_learner.load(self.s_prime,self.a_prime) - self.qsa_tmp))
 
@@ -101,13 +99,8 @@ class rl_runner(object):
                     self.stats['epsilon_min'] = p['epsilon_min']
                     self.stats['save_images'] = p['save_images']
                     self.stats['image_save_dir'] = p['image_save_dir']
-                    disp_state = np.copy(self.s)
-                    disp_state = disp_state - self.qsa.mins
-                    disp_state /= self.qsa.divs
-                    disp_state = np.minimum(disp_state,self.qsa.arr_maxs)
-                    disp_state = np.maximum(disp_state,self.qsa.arr_mins)
 
-                    self.stats['state'] = np.copy(disp_state)
+                    self.stats['state'] = np.copy(self.s)
                     if(p['qsa_type'] == 'nnet'):
                         self.stats['nnet_state'] = np.copy(self.qsa.net.input)
                     #show full episode for episodes that don't fast forward
@@ -301,20 +294,24 @@ class rl_runner(object):
 
         self.num_actions = self.sim.ale.getMinimalActionSet().size
 
-        self.state_ram_extractor = pong_ram_extractor
-        self.ram_extractor_func = pong_ram_extractor.pong_ram_extractor
+        self.state_ram_extractor = pong_ram_extractor()
+
+        #self.ram_extractor_func = pong_ram_extractor.pong_ram_extractor
 
         self.alpha = p['learning_rate']
-        divs = self.state_ram_extractor.divs
-        mins = self.state_ram_extractor.mins
-        maxs = self.state_ram_extractor.maxs
 
         if(p['qsa_type'] == 'tabular'):
             self.qsa = tabular_ram_qsa()
-            self.qsa.init(mins,maxs,divs,self.num_actions,self.alpha)
+            mins = self.state_ram_extractor.s_mins
+            maxs = self.state_ram_extractor.s_maxs
+            self.qsa.init(mins,maxs,self.num_actions,p)
         elif(p['qsa_type'] == 'nnet'):
             self.qsa = nnet_qsa()
-            self.qsa.init(mins,maxs,divs,self.num_actions,p)
+            mins = np.ones(self.state_ram_extractor.s_mins.shape)*(-1.25)
+            maxs = np.ones(self.state_ram_extractor.s_mins.shape)*(1.25)
+            self.qsa.init(mins,maxs,self.num_actions,p)
+            self.state_ram_extractor.set_normalization(mins,maxs)
+
 
         self.qsa_learner = q_learning_updater()
         self.qsa_learner.init(self.qsa,self.gamma) 

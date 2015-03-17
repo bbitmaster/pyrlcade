@@ -19,7 +19,7 @@ space = hp.choice('main_choice',[{
     'gamma'               : hp.choice('gamm',[0.9,0.98,0.99,0.995,0.999,0.9995,0.9999]),
     'action_type'         : 'e_greedy',
     'decay_type'          : 'geometric',
-    'epsilon'             : hp.choice('eps',[0.05,0.10,0.15,0.20,0.30,0.40]),
+    'epsilon'             : hp.choice('eps',[0.20,0.30,0.40,0.50,0.80,0.999]),
     'epsilon_decay'       : hp.choice('eps_decay',[0.999,0.9995,0.9996,0.9997,0.9998,1.0]),
     'epsilon_min'         : hp.choice('eps_min',[0.02,0.01,0.005,0.001]),
     }])

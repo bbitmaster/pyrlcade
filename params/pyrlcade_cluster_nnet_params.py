@@ -4,7 +4,7 @@ runtype='sarsa'
 
 #A handy name for this run. The data file will be given this name as
 #<resultsdir><simname><version>.h5py
-simname = 'pyrlcade_nnet_test'
+simname = 'pyrlcade_cluster_nnet_test'
 version = '1.1'
 results_dir = '../results/'
 
@@ -31,9 +31,10 @@ image_save_dir="/home/bgoodric/tmp/" #I Guess that underutilized windows partiti
 qsa_type='nnet'
 
 #parameters for neural network qsa
-activation_function='linear_rectifier'
+activation_function='linear'
+activation_function_final='linear'
 
-num_hidden=64
+num_hidden=512
 learning_rate = 0.01
 learning_rate_decay_type='geometric'
 learning_rate_decay=1.0
@@ -48,19 +49,26 @@ initialization_scheme_final='glorot'
 initialization_constant=1.0
 initialization_constant_final=1.0
 
+#cluster_func stuff
+cluster_func = 'cluster_func'
+clusters_selected=8
+cluster_speed=0.0
+
 #action is encoded using one hot encoding with these as the "hot" and "not hot" targets
 incorrect_target = -1.0
 correct_target = 1.0
 
+reward_multiplier=0.01
+
 #decay_type can be 'geometric' or 'linear'
 decay_type='geometric'
-epsilon=0.20
+epsilon=0.99
 epsilon_min=0.01
 #epsilon_decay=exp((log(epsilon_min) - log(epsilon))/10000.0)
 #print("epsilon_decay: " + str(epsilon_decay))
 epsilon_decay=0.9998
 #epsilon_decay = (epsilon - epsilon_min)/10000
-gamma=0.999
+gamma=0.90
 
 action_type='e_greedy'
 

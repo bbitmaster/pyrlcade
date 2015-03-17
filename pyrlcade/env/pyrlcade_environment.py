@@ -10,6 +10,7 @@ class pyrlcade_environment(object):
 
         self.max_frames_per_episode = self.ale.getInt("max_num_frames_per_episode");
         self.ale.set("random_seed",123)
+        self.ale.set("disable_color_averaging",1)
         self.ale.set("frame_skip",ale_frame_skip)
 
         self.ale.loadROM(rom_file)
