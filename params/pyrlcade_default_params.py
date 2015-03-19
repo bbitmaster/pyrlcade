@@ -25,6 +25,8 @@ use_float32=True
 random_seed = 4;
 initial_r_sum_avg=-21.0
 
+reward_multiplier=1.0
+
 learning_rate = 0.4
 
 save_images=False

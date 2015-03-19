@@ -9,6 +9,7 @@ from pyrlcade.state.cluster_nnet_qsa import nnet_qsa #TODO remove nnet_qsa.py an
 from pyrlcade.misc.clear import clear
 from pyrlcade.misc.save_h5py import save_results,load_results
 from pyrlcade.state.q_learning_updater import q_learning_updater
+from pyrlcade.state.sarsa_updater import sarsa_updater
 from pyrlcade.state.pong_ram_extractor import pong_ram_extractor
 
 class rl_runner(object):
@@ -31,6 +32,9 @@ class rl_runner(object):
         self.fastforwardskip = 5
 
         self.reward_multiplier = p['reward_multiplier']
+
+        #This flag is set to true if we get NaN values somewhere, which isn't supposed to happen
+        self.nan_output = False
 
         if(self.do_vis):
             #only import if we need it, since we don't want to require installation of pygame
@@ -161,10 +165,16 @@ class rl_runner(object):
                     break
                 if(self.step > p['max_steps']):
                     break
+                #exit if the neural network starts outputting NaN
+                if(np.isnan(np.sum(self.qsa_prime_list))):
+                    print("ERROR: The qsa_prime has NaN values! Something went unstable!")
+                    self.nan_output=True
+                    save_and_exit=True
+                    break
                 ## s <- s';  a <-- a'
                 self.s = self.s_prime
                 self.a = self.a_prime
-                #self.qsa_tmp = self.qsa_prime_list
+                self.qsa_tmp = self.qsa_prime_list
 
                 #print("Next Step \n")
                 self.step += 1
@@ -234,6 +244,7 @@ class rl_runner(object):
             a = np.argmax(np.array(qsa_list + noise))
             self.prob_of_different_action = 0.999*self.prob_of_different_action + (1.0 - 0.999)*(a != a_before)
 
+        #save this for printout, and to check for nan
         self.tmp_a_list = np.copy(np.array(qsa_list))
         return (a,qsa_list)
 
@@ -252,6 +263,7 @@ class rl_runner(object):
         self.results['epsilon_min'] = np.array(self.epsilon_min)
         self.results['alpha'] = np.array(self.alpha)
         self.results['gamma'] = np.array(self.gamma)
+        self.results['nan_output'] = np.array(self.nan_output)
         self.results['episode'] = np.array(self.episode)
         self.results['parameters'] = p
         #TODO: save and load more hyperparameters, such as game memory?
@@ -313,7 +325,10 @@ class rl_runner(object):
             self.state_ram_extractor.set_normalization(mins,maxs)
 
 
-        self.qsa_learner = q_learning_updater()
+        if(p['rl_algo'] == 'sarsa'):
+            self.qsa_learner = sarsa_updater()
+        else:
+            self.qsa_learner = q_learning_updater()
         self.qsa_learner.init(self.qsa,self.gamma) 
 
 

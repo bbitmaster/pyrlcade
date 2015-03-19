@@ -58,7 +58,7 @@ cluster_speed=0.0
 incorrect_target = -1.0
 correct_target = 1.0
 
-reward_multiplier=0.01
+reward_multiplier=0.1
 
 #decay_type can be 'geometric' or 'linear'
 decay_type='geometric'
@@ -71,6 +71,8 @@ epsilon_decay=0.9998
 gamma=0.90
 
 action_type='e_greedy'
+
+rl_algo='sarsa'
 
 #If defined, will print the state variables on every frame
 print_state_debug=True
