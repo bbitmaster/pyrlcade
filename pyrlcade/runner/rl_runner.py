@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 import time
 import math
+import os
 import sys
 import numpy as np
 from pyrlcade.env.pyrlcade_environment import pyrlcade_environment
 from pyrlcade.state.tabular_ram_qsa import tabular_ram_qsa
-from pyrlcade.state.cluster_nnet_qsa import nnet_qsa #TODO remove nnet_qsa.py and rename
+from pyrlcade.state.nnet_qsa import nnet_qsa
+from pyrlcade.state.nnet_qsa_allactions import nnet_qsa_allactions
 from pyrlcade.misc.clear import clear
 from pyrlcade.misc.save_h5py import save_results,load_results
 from pyrlcade.state.q_learning_updater import q_learning_updater
 from pyrlcade.state.sarsa_updater import sarsa_updater
 from pyrlcade.state.pong_ram_extractor import pong_ram_extractor
+from pyrlcade.state.normalization_transformer import normalization_transformer
+from pyrlcade.state.state_expander_transformer import state_expander_transformer
 
 class rl_runner(object):
     def run_sim(self,p):
@@ -86,7 +90,7 @@ class rl_runner(object):
                 #todo: qsa_prime can be saved and reused for qsa_tmp
                 #qsa_tmp = self.qsa.load(self.s,self.a)
                 given_reward = self.r*self.reward_multiplier
-                self.qsa_learner.update(self.s,self.a,given_reward,self.s_prime,self.a_prime,self.qsa_prime_list)
+                self.qsa_learner.update(self.alpha,self.s,self.a,given_reward,self.s_prime,self.a_prime,self.qsa_prime_list)
                 #self.qsa_learner.store(self.s,self.a,self.qsa_tmp +  \
                 #    self.alpha*(self.r + self.gamma*self.qsa_learner.load(self.s_prime,self.a_prime) - self.qsa_tmp))
 
@@ -137,14 +141,27 @@ class rl_runner(object):
                     print("Episodes Elapsed: " + str(self.episode))
                     print("Average Reward Per Episode: " + str(self.r_sum_avg))
                     print("Epsilon: " + str(self.epsilon))
+                    print("Epsilon Decay: " + str(p['epsilon_decay']))
                     print("Epsilon Min: " + str(p['epsilon_min']))
                     print("Gamma: " + str(p['gamma']))
                     print("Alpha (learning rate): " + str(self.alpha))
                     if(p.has_key('learning_rate_decay')):
                         print("Alpha (learning rate) decay: " + str(p['learning_rate_decay']))
-                    if(p['action_type'] == 'noisy_qsa'):
-                        print("Average QSA Standard Deviation: " + str(self.qsa_std_avg))
-                        print("Probability of taking different action: " + str(self.prob_of_different_action))
+
+                    if(p.has_key('learning_rate_min')):
+                        print("Alpha (learning rate) Min: " + str(p['learning_rate_min']))
+                    if(p.has_key('activation_function')):
+                        print("activation_function: " + str(p['activation_function']))
+                    if(p.has_key('activation_function_final')):
+                        print("activation_function_final: " + str(p['activation_function_final']))
+                    if(p.has_key('num_hidden')):
+                        print("num_hidden: " + str(p['num_hidden']))
+                    if(p.has_key('cluster_func') and p['cluster_func'] is not None):
+                        print("clusters_selected: " + str(p['clusters_selected']))
+                    print("Reward Multiplier: " + str(p['reward_multiplier']))
+                    print("RL Algorithm: " + str(p['rl_algo']))
+
+
                     print("Average Steps Per Second: " + str(1.0/avg_step_duration))
                     print("Action Type: " + str(p['action_type']))
                     print("a_list: " + str(self.tmp_a_list))
@@ -188,12 +205,13 @@ class rl_runner(object):
             elif(p['decay_type'] == 'linear'):
                 self.epsilon = self.epsilon - p['epsilon_decay']
                 self.epsilon = max(p['epsilon_min'],self.epsilon)
-#            if(p.has_key('learning_rate_decay_type') and p['learning_rate_decay_type'] == 'geometric'):
-#                self.alpha = self.alpha * p['learning_rate_decay']
-#                self.alpha = max(p['learning_rate_min']/p['learning_rate'],self.alpha)
-#            elif(p.has_key('learning_rate_decay_type') and p['learning_rate_decay_type'] == 'linear'):
-#                self.alpha = self.alpha - p['learning_rate_decay']
-#                self.alpha = max(p['learning_rate_min']/p['learning_rate'],self.alpha)
+
+            if(p.has_key('learning_rate_decay_type') and p['learning_rate_decay_type'] == 'geometric'):
+                self.alpha = self.alpha * p['learning_rate_decay']
+                self.alpha = max(p['learning_rate_min'],self.alpha)
+            elif(p.has_key('learning_rate_decay_type') and p['learning_rate_decay_type'] == 'linear'):
+                self.alpha = self.alpha - p['learning_rate_decay']
+                self.alpha = max(p['learning_rate_min'],self.alpha)
 
 
             if(time.time() - save_time > save_interval or save_and_exit == True):
@@ -265,6 +283,7 @@ class rl_runner(object):
         self.results['gamma'] = np.array(self.gamma)
         self.results['nan_output'] = np.array(self.nan_output)
         self.results['episode'] = np.array(self.episode)
+        self.results['os'] = os.uname()[1]
         self.results['parameters'] = p
         #TODO: save and load more hyperparameters, such as game memory?
 
@@ -308,28 +327,46 @@ class rl_runner(object):
 
         self.state_ram_extractor = pong_ram_extractor()
 
-        #self.ram_extractor_func = pong_ram_extractor.pong_ram_extractor
+        (state_size,state_mins,state_maxs) = self.state_ram_extractor.get_size_and_range()
 
         self.alpha = p['learning_rate']
+        if(p.has_key('nnet_use_combined_actions') and p['nnet_use_combined_actions'] == True):
+            self.use_combined_actions = True
+        else:
+            self.use_combined_actions = False
 
         if(p['qsa_type'] == 'tabular'):
             self.qsa = tabular_ram_qsa()
-            mins = self.state_ram_extractor.s_mins
-            maxs = self.state_ram_extractor.s_maxs
-            self.qsa.init(mins,maxs,self.num_actions,p)
+            self.qsa.init(state_mins,state_maxs,self.num_actions,p)
         elif(p['qsa_type'] == 'nnet'):
-            self.qsa = nnet_qsa()
-            mins = np.ones(self.state_ram_extractor.s_mins.shape)*(-1.25)
-            maxs = np.ones(self.state_ram_extractor.s_mins.shape)*(1.25)
-            self.qsa.init(mins,maxs,self.num_actions,p)
-            self.state_ram_extractor.set_normalization(mins,maxs)
+            if(p.has_key('nnet_use_combined_actions') and p['nnet_use_combined_actions'] == True):
+                self.qsa = nnet_qsa_allactions()
+            else:
+                self.qsa = nnet_qsa()
+            mins = np.ones(state_size)*(-1.25)
+            maxs = np.ones(state_size)*(1.25)
 
+            #Neural network input must be normalized, set up a normalizer for the state extractor
+            self.normalization_transformer = normalization_transformer()
+            self.normalization_transformer.init(state_mins,state_maxs,mins,maxs)
+            self.state_ram_extractor.set_transform_class(self.normalization_transformer)
+
+            nnet_size = state_size
+            #set up a radial basis network transformer
+            if(p.has_key('do_rbf_transform') and p['do_rbf_transform'] == True):
+                self.rbf_transformer = state_expander_transformer()
+                self.rbf_size = p['rbf_transform_size']
+                self.rbf_width_scale = p['rbf_width_scale']
+                self.rbf_transformer.init(mins,maxs,self.rbf_size,self.rbf_width_scale)
+                self.normalization_transformer.set_transform_class(self.rbf_transformer)
+                nnet_size = self.rbf_size
+            self.qsa.init(nnet_size,self.num_actions,p)
 
         if(p['rl_algo'] == 'sarsa'):
             self.qsa_learner = sarsa_updater()
         else:
             self.qsa_learner = q_learning_updater()
-        self.qsa_learner.init(self.qsa,self.gamma) 
+        self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions) 
 
 
 if __name__ == '__main__':

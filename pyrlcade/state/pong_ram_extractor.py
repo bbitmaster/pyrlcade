@@ -1,29 +1,27 @@
 #this class implements a tabular storage for a Qsa table
 import numpy as np
 
-
 class pong_ram_extractor(object):
     def __init__(self):
         self.divs = np.array([33,5,1,1,5])
         self.mins = np.array([0x32,0x26,9,7,0x26])
         self.maxs = np.array([0xCD,0xCB,11,13,0xCB])
-        
+
         self.size = self.maxs - self.mins
         self.size = self.size + self.divs
         self.size = self.size/self.divs
 
-        self.arr_mins = (np.zeros(self.size.shape)).astype(np.int64)
-        self.arr_maxs = (self.size - np.ones(self.size.shape)).astype(np.int64)
-        self.s_mins = self.arr_mins
-        self.s_maxs = self.arr_maxs
+        self.state_size = self.mins.size
+        self.state_mins = (np.zeros(self.size.shape)).astype(np.int64)
+        self.state_maxs = (self.size - np.ones(self.size.shape)).astype(np.int64)
 
-        self.normalize_func=self.no_normalize
+        self.transform_class=None
 
-    #a call to this function will turn on normalization and set it to the range specified
-    def set_normalization(self,s_mins,s_maxs):
-        self.s_mins = s_mins
-        self.s_maxs = s_maxs
-        self.normalize_func=self.normalize_state
+    def set_transform_class(self,transform_class):
+        self.transform_class = transform_class
+
+    def get_size_and_range(self):
+        return (self.state_size,self.state_mins,self.state_maxs)
 
     def extract_state(self,ram):
         #ram values
@@ -38,21 +36,23 @@ class pong_ram_extractor(object):
         state[3] += 10
         state = state - self.mins
         state = state/self.divs
-        return self.normalize_func(state)
+        if(self.transform_class is None):
+            return state
+        else:
+            return self.transform_class.transform(state)
 
-    def no_normalize(self,state):
-        return state
+    #def no_normalize(self,state):
+    #    return state
 
-    def normalize_state(self,state):
-        s = state.astype(np.float32)
-        s = np.minimum(s,self.arr_maxs)
-        s = np.maximum(s,self.arr_mins)
-        s = s/(self.arr_maxs)
-        s = s*(self.s_maxs-self.s_mins) + self.s_mins
-        #s = s-0.5
-        #s = s*2.25
-        return s
-
+    #def normalize_state(self,state):
+    #    s = state.astype(np.float32)
+    #    s = np.minimum(s,self.arr_maxs)
+    #    s = np.maximum(s,self.arr_mins)
+    #    s = s/(self.arr_maxs)
+    #    s = s*(self.s_maxs-self.s_mins) + self.s_mins
+    #    #s = s-0.5
+    #    #s = s*2.25
+    #    return s
 
 if __name__ == '__main__':
     pass

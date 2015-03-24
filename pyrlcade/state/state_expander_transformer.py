@@ -2,8 +2,8 @@
 from nnet_toolkit import nnet
 import numpy as np
 
-class state_expander(object):
-    def init(self,mins,maxs,new_size):
+class state_expander_transformer(object):
+    def init(self,mins,maxs,new_size,width_scale=1.0):
         layers = [];
         old_size = len(list(mins))
         #self.mins = np.array(mins)
@@ -18,6 +18,7 @@ class state_expander(object):
         #self.arr_maxs = (self.size - np.ones(self.size.shape)).astype(np.int64)
 
         self.centroids = np.asarray(((np.random.random((new_size,old_size)) - 0.5) * 2.25),np.float32)
+        self.width_scale = width_scale
 
         #Find the maximum distance between any two rows by using a double for loop
         self.d_max = 0.0
@@ -28,8 +29,13 @@ class state_expander(object):
                     self.d_max = d
         #This width is suggested in the text:
         #On the Kernel Widths in Radial-Basis Function Networks
+        #also in Neural Networks a Comrehensive Foundation by Simon Haykin
         self.sigma = self.d_max/np.sqrt(2*new_size)
         self.sigma = self.sigma**2 #use sigma squared
+        self.transform_class = None
+
+    def set_transform_class(self,transform_class):
+        self.transform_class = transform_class
 
     def transform(self,state):
         if(state.ndim == 1):
@@ -41,8 +47,11 @@ class state_expander(object):
             np.sum(state**2,0)[np.newaxis,:]
             #print("dist: " + str(dist))
         
-        dist_inv = np.exp(-dist/(2*self.sigma))
-        return dist_inv
+        dist_inv = np.exp(-dist/(2*self.sigma*self.width_scale))
+        if(self.transform_class is None):
+            return dist_inv
+        else:
+            return self.transform_class.transform(dist_inv)
 
 if __name__ == '__main__':
     mins = np.zeros(5)

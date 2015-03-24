@@ -91,23 +91,17 @@ class visualize_sdl(object):
             font = pygame.font.SysFont("Ubuntu Mono",30)
             text = font.render("Total Reward: " + str(stats['total_reward']) ,1,(208,255,255))
             self.screen.blit(text,(490,line_pos))
-
-            #display state
             line_pos += height
-            font = pygame.font.SysFont("Ubuntu Mono",25)
-            if(stats['state'].dtype == np.int64):
-                text_str = "State: " + ''.join(["%02d "%x for x in stats['state']])
-            else:
-                text_str = "State: " + ''.join(["%8.4f "%x for x in stats['state']])
-            text = font.render(text_str,1,(208,208,255))
-            #text = font.render("State: " + str(stats['state']) ,1,(208,208,255))
-            self.screen.blit(text,(490,line_pos))
 
             #display state
-            if(stats.has_key('nnet_state')):
-                font = pygame.font.SysFont("Ubuntu Mono",20)
-                text = font.render("NNet state: " + ''.join(["%03.3f "%x for x in stats['nnet_state']]),1,(208,208,255))
-                self.screen.blit(text,(20,640))
+            font = pygame.font.SysFont("Ubuntu Mono",20)
+            state = stats['state'][0:20]
+            if(stats['state'].dtype == np.int64):
+                text_str = "State: " + ''.join(["%02d "%x for x in state])
+            else:
+                text_str = "State: " + ''.join(["%8.4f "%x for x in state])
+            text = font.render(text_str,1,(208,208,255))
+            self.screen.blit(text,(490,line_pos))
 
             #display episodes below game
             line_pos += height
@@ -144,6 +138,26 @@ class visualize_sdl(object):
             font = pygame.font.SysFont("Ubuntu Mono",25)
             text = font.render("Epsilon Minimum: " + str(stats['epsilon_min']) ,1,(255,255,255))
             self.screen.blit(text,(490,line_pos))
+
+            #display nnet state
+            if(stats.has_key('nnet_state')):
+                font = pygame.font.SysFont("Ubuntu Mono",20)
+                line_pos=640
+                state_pos=0
+                state = stats['nnet_state']
+                state_size = state.size
+                join_str = "NNet State "
+                while(state_pos < state_size):
+                    text_str = join_str + ''.join(["%3.3f "%state[x] for x in range(state_pos,min(state_pos+18,state_size))])
+                    text = font.render(text_str,1,(208,208,255))
+                    if(line_pos > self.game_surface.get_height):
+                        break
+                    self.screen.blit(text,(18,line_pos))
+                    join_str = ''
+                    line_pos += font.get_height()
+                    state_pos += 18
+
+
 
             if(stats['fast_forward']):
                 line_pos=30

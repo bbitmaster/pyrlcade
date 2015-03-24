@@ -3,7 +3,6 @@ import numpy as np
 
 class tabular_ram_qsa(object):
     def init(self,mins,maxs,num_actions,p):
-        self.alpha = p['learning_rate']
         self.num_actions = num_actions
         self.mins = np.copy(np.array(mins)).astype(np.int64)
         self.maxs = np.copy(np.array(maxs)).astype(np.int64)
@@ -21,12 +20,12 @@ class tabular_ram_qsa(object):
         s = np.maximum(s,self.mins)
         self.data[action][tuple(s)] = value
 
-    def update(self,state,action,value):
+    def update(self,alpha,state,action,value):
         s =  state - self.mins
         s = np.minimum(s,self.maxs)
         s = np.maximum(s,self.mins)
         d = self.data[action][tuple(s)]
-        self.data[action][tuple(s)] = d + self.alpha*(value - d)
+        self.data[action][tuple(s)] = d + alpha*(value - d)
         #above can also be expressed as:
         #d*(1 - self.alpha) + self.alpha*value
 
