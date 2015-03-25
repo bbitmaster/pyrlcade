@@ -14,7 +14,7 @@ def save_results(filename,results):
             p_group = f_handle.create_group(k);
             for param in v.iteritems():
                 #only save the ones that have a data type that is supported
-                if(type(param[1]) in (int,float,str,np.ndarray)):
+                if(type(param[1]) in (bool,int,float,str,np.ndarray)):
                     p_group[param[0]] = param[1];
     f_handle.close();
 
