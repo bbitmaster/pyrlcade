@@ -156,6 +156,10 @@ class rl_runner(object):
                         print("activation_function_final: " + str(p['activation_function_final']))
                     if(p.has_key('num_hidden')):
                         print("num_hidden: " + str(p['num_hidden']))
+                    if(p.has_key('rbf_transform_size')):
+                        print("rbf_transform_size: " + str(p['rbf_transform_size']))
+                    if(p.has_key('rbf_width_scale')):
+                        print("rbf_width_scale: " + str(p['rbf_width_scale']))
                     if(p.has_key('cluster_func') and p['cluster_func'] is not None):
                         print("clusters_selected: " + str(p['clusters_selected']))
                     print("Reward Multiplier: " + str(p['reward_multiplier']))
