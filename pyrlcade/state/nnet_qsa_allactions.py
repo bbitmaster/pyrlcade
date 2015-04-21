@@ -60,7 +60,6 @@ class nnet_qsa_allactions(object):
         self.net.feed_forward()
         self.net.error = np.zeros(self.net.output.shape,dtype=np.float32)
         self.net.error[action,0] = -(value - self.net.output[action,0])
-
         self.net.back_propagate()
         self.net.update_weights()
 

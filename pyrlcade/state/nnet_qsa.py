@@ -107,21 +107,20 @@ class nnet_qsa(object):
         self.net.back_propagate()
         self.net.update_weights()
 
-
     def load(self,state,action):
-        s =  state
-        #s /= self.divs
-        #s = np.minimum(s,self.arr_maxs)
-        #s = np.maximum(s,self.arr_mins)
-        #s = s/(self.arr_maxs)
-        #s = s-0.5
-        #s = s*2.25
-        action_list = np.ones((1,self.num_actions))*self.incorrect_target
-        action_list[0,action] = self.correct_target
-        s = np.append(s,action_list)[:,np.newaxis]
+        #if a single instance is passes, make it a vector
+        if(type(action) is int):
+            action = np.array([action])
+            state = state[:,np.newaxis]
+        #build matrix of one hot actions
+        action_list = np.ones((self.num_actions,action.shape[0]))*self.incorrect_target
+        for i in range(action.shape[0]):
+            action_list[action[i],i] = self.correct_target
+        #append state matrix to action matrix
+        s = np.append(state,action_list,axis=0)
         self.net.input = s
         self.net.feed_forward()
-        return self.net.output[0,0]
+        return self.net.output[0]
 
 if __name__ == '__main__':
     #TODO: tests?

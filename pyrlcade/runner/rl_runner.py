@@ -5,11 +5,11 @@ import os
 import sys
 import numpy as np
 from pyrlcade.env.pyrlcade_environment import pyrlcade_environment
+from pyrlcade.misc.clear import clear
+from pyrlcade.misc.save_h5py import save_results,load_results
 from pyrlcade.state.tabular_ram_qsa import tabular_ram_qsa
 from pyrlcade.state.nnet_qsa import nnet_qsa
 from pyrlcade.state.nnet_qsa_allactions import nnet_qsa_allactions
-from pyrlcade.misc.clear import clear
-from pyrlcade.misc.save_h5py import save_results,load_results
 from pyrlcade.state.q_learning_updater import q_learning_updater
 from pyrlcade.state.sarsa_updater import sarsa_updater
 from pyrlcade.state.pong_ram_extractor import pong_ram_extractor
@@ -18,40 +18,74 @@ from pyrlcade.state.state_expander_transformer import state_expander_transformer
 
 class rl_runner(object):
     def run_sim(self,p):
+        #init printout options
+
+        #The 1-second printout, off by default, can be turned on
+        if(p.has_key('running_printout')):
+            self.running_printout = p['running_printout']
+        else:
+            self.running_printout = False
+
+        #the debug verbosity level, 1 by default
+        #These are the debug levels:
+        #1 - episode level printouts
+        #2 - step level printouts showing
+        #    -- current qsa
+        #    -- current action
+        #    -- current reward
+        #3   -- current state (first 5 variables only)
+        #4   -- additional TD-update information
+        if(p.has_key('debug_level')):
+            self.debug_level = p['debug_level']
+        else:
+            self.debug_level = 1
+
         #init random number generator from seed
         np.random.seed(p['random_seed']);
-   
+
         #initialize environment
         self.sim = pyrlcade_environment()
         self.sim.init(p['rom_file'],p['ale_frame_skip'])
 
         self.init_sim(p)
 
-        self.do_vis = p['do_vis']
+        if(p.has_key('vis_type')):
+            self.vis_type = p['vis_type']
+        else:
+            self.vis_type = None
+
         self.save_images = p.get('save_images',False)
         self.image_save_dir = p.get('image_save_dir',None)
         save_interval = p['save_interval']
 
         self.showevery = p['showevery']
-        self.fastforwardskip = 5
+        self.fastforwardskip = p['fastforwardskip']
 
         self.reward_multiplier = p['reward_multiplier']
 
         #This flag is set to true if we get NaN values somewhere, which isn't supposed to happen
         self.nan_output = False
 
-        if(self.do_vis):
+        self.do_vis = False
+        if(self.vis_type == 'pyrlcade'):
             #only import if we need it, since we don't want to require installation of pygame
             from pyrlcade.vis.visualize_sdl import visualize_sdl
             v = visualize_sdl()
             v.init_vis(p)
+            self.do_vis = True
+        if(self.vis_type == 'pong_qsa'):
+            #only import if we need it, since we don't want to require installation of pygame
+            from pyrlcade.vis.visualize_pong_qsa_sdl import visualize_pong_qsa_sdl
+            v = visualize_pong_qsa_sdl()
+            v.init_vis(p)
+            self.do_vis = True
 
-        print_update_timer = time.time()
-        start_time = time.time()
+        self.print_update_timer = time.time()
+        self.start_time = time.time()
         elapsed_time = time.time()
         step_duration_timer = time.time()
         save_time = time.time()
-        avg_step_duration = 1.0
+        self.avg_step_duration = 1.0
 
         ##repeat for each episode
         self.r_sum_avg      = p['initial_r_sum_avg']
@@ -73,6 +107,11 @@ class rl_runner(object):
             save_and_exit = False
 
             while 1:
+                #zero the bias neuron...
+                if(p.has_key('zero_bias') and p['zero_bias']):
+                    if(type(self.qsa) is nnet_qsa):
+                        self.qsa.net.layer[-1].weights[:,-1] = 0.0
+
                 #print("s: " + str(self.s))
                 ##take action a, observe r, s'
                 self.sim.set_action(self.a)
@@ -92,19 +131,37 @@ class rl_runner(object):
                 given_reward = self.r*self.reward_multiplier
                 self.qsa_learner.update(self.alpha,self.s,self.a,given_reward,self.s_prime,self.a_prime,self.qsa_prime_list)
                 #self.qsa_learner.store(self.s,self.a,self.qsa_tmp +  \
-                #    self.alpha*(self.r + self.gamma*self.qsa_learner.load(self.s_prime,self.a_prime) - self.qsa_tmp))
-
+                #    self.alpha*(self.r + self.gamma*self.qsa_learner.load(self.s_prime,self.a_prime) - self.qsa_tmp)) 
                 
+                if(self.debug_level >= 2):
+                    sys.stdout.write("ep: " + str(self.episode) + " step: " + str(self.step) + (" qsa: %2.4f" %(self.qsa_tmp[self.a])) + "r: " + str(self.r) + " a: " + str(self.a))
+                if(self.debug_level >= 3):
+                    sys.stdout.write(" state:")
+                    for i in range(min(5,len(self.s))):
+                        sys.stdout.write(" %2.4f" % self.s[i])
+                if(self.debug_level >= 2):
+                    sys.stdout.write("\n")
+
+                if(self.debug_level >= 5):
+                    sys.stdout.write("largest states: ")
+                    s_sorted = np.sort(self.s)[::-1][0:8]
+                    for i in range(min(8,len(s_sorted))):
+                        sys.stdout.write(" %2.4f" % s_sorted)
+                    sys.stdout.write("\n")
+                #TODO: put this do_vis stuff in a separate function
                 if(self.do_vis):
                     self.stats = {}
+                    self.stats['qsa'] = self.qsa
+                    self.stats['qsa_learner'] = self.qsa_learner
+                    self.stats['state_ram_extractor'] = self.state_ram_extractor
                     self.stats['action'] = self.a
                     self.stats['total_reward'] = self.r_sum
                     self.stats['episode'] = self.episode
                     self.stats['r_sum_avg'] = self.r_sum_avg
                     self.stats['learning_rate'] = self.alpha
-                    self.stats['gamma'] = p['gamma']
+                    self.stats['gamma'] = self.gamma
                     self.stats['epsilon'] = self.epsilon
-                    self.stats['epsilon_min'] = p['epsilon_min']
+                    self.stats['epsilon_min'] = self.epsilon_min
                     self.stats['save_images'] = p['save_images']
                     self.stats['image_save_dir'] = p['image_save_dir']
 
@@ -112,7 +169,7 @@ class rl_runner(object):
                     if(p['qsa_type'] == 'nnet'):
                         self.stats['nnet_state'] = np.copy(self.qsa.net.input)
                     #show full episode for episodes that don't fast forward
-                    if not (self.episode % self.showevery):
+                    if self.showevery is not None and not (self.episode % self.showevery):
                         self.fast_forward = False
                         self.stats['fast_forward'] = False
                         if(not p['save_images']):
@@ -131,50 +188,9 @@ class rl_runner(object):
                         exit = v.update_vis()
                         if(exit):
                             quit=True
-                        
-                #TODO: put this printout stuff in a function
-                #the self.episode > 0 check prevents a bug where some of the printouts are empty arrays before the first episode completes
-                if(print_update_timer < time.time() - 1.0 and self.episode > 0):
-                    clear()
-                    print("Simname: " + str(p['simname']))
-                    print("Version: " + str(p['version']))
-                    print("Episodes Elapsed: " + str(self.episode))
-                    print("Average Reward Per Episode: " + str(self.r_sum_avg))
-                    print("Epsilon: " + str(self.epsilon))
-                    print("Epsilon Decay: " + str(p['epsilon_decay']))
-                    print("Epsilon Min: " + str(p['epsilon_min']))
-                    print("Gamma: " + str(p['gamma']))
-                    print("Alpha (learning rate): " + str(self.alpha))
-                    if(p.has_key('learning_rate_decay')):
-                        print("Alpha (learning rate) decay: " + str(p['learning_rate_decay']))
 
-                    if(p.has_key('learning_rate_min')):
-                        print("Alpha (learning rate) Min: " + str(p['learning_rate_min']))
-                    if(p.has_key('activation_function')):
-                        print("activation_function: " + str(p['activation_function']))
-                    if(p.has_key('activation_function_final')):
-                        print("activation_function_final: " + str(p['activation_function_final']))
-                    if(p.has_key('num_hidden')):
-                        print("num_hidden: " + str(p['num_hidden']))
-                    if(p.has_key('rbf_transform_size')):
-                        print("rbf_transform_size: " + str(p['rbf_transform_size']))
-                    if(p.has_key('rbf_width_scale')):
-                        print("rbf_width_scale: " + str(p['rbf_width_scale']))
-                    if(p.has_key('cluster_func') and p['cluster_func'] is not None):
-                        print("clusters_selected: " + str(p['clusters_selected']))
-                    print("Reward Multiplier: " + str(p['reward_multiplier']))
-                    print("RL Algorithm: " + str(p['rl_algo']))
-
-
-                    print("Average Steps Per Second: " + str(1.0/avg_step_duration))
-                    print("Action Type: " + str(p['action_type']))
-                    print("a_list: " + str(self.tmp_a_list))
-                    m, s = divmod(time.time() - start_time, 60)
-                    h, m = divmod(m, 60)
-                    print "Elapsed Time %d:%02d:%02d" % (h, m, s)
-                    sys.stdout.flush()
-                    print_update_timer = time.time()
-
+                if(self.running_printout):
+                    self.do_running_printout(p)
 
                 if(self.episode >= p['train_episodes']):
                     save_and_exit = True
@@ -197,17 +213,24 @@ class rl_runner(object):
                 self.a = self.a_prime
                 self.qsa_tmp = self.qsa_prime_list
 
+
                 #print("Next Step \n")
                 self.step += 1
-                avg_step_duration = 0.995*avg_step_duration + (1.0 - 0.995)*(time.time() - step_duration_timer)
+                self.avg_step_duration = 0.995*self.avg_step_duration + (1.0 - 0.995)*(time.time() - step_duration_timer)
                 step_duration_timer = time.time()
                 #end step loop
 
+            #print debug for episode
+            if(self.debug_level >= 1):
+                m, s = divmod(time.time() - self.start_time, 60)
+                h, m = divmod(m, 60)
+                print(("ep: %d" % self.episode) + (" epsilon: %2.4f" %self.epsilon) + " total reward: " + str(self.r_sum) + (" avg_reward: %2.4f" % self.r_sum_avg) + (" steps_per_sec: %2.4f" % (1.0/self.avg_step_duration)) + (" Elapsed Time %d:%02d:%02d" % (h, m, s)))
+
             if(p['decay_type'] == 'geometric'):
-                self.epsilon = self.epsilon * p['epsilon_decay']
+                self.epsilon = self.epsilon * self.epsilon_decay
                 self.epsilon = max(p['epsilon_min'],self.epsilon)
             elif(p['decay_type'] == 'linear'):
-                self.epsilon = self.epsilon - p['epsilon_decay']
+                self.epsilon = self.epsilon - self.epsilon_decay
                 self.epsilon = max(p['epsilon_min'],self.epsilon)
 
             if(p.has_key('learning_rate_decay_type') and p['learning_rate_decay_type'] == 'geometric'):
@@ -220,7 +243,7 @@ class rl_runner(object):
 
             if(time.time() - save_time > save_interval or save_and_exit == True):
                 print('saving results...')
-                self.save_results(p['results_dir'] + p['simname'] + p['version'] + '.h5py',p)
+                self.save_results(p['results_dir'] + self.simname + self.version + '.h5py',p)
                 save_time = time.time();
 
             if(quit==True or save_and_exit==True):
@@ -320,6 +343,10 @@ class rl_runner(object):
 #        print('loaded epsilon: ' + str(self.epsilon))
 
     def init_sim(self,p):
+        #set params
+        self.simname       = p['simname']
+        self.version       = p['version']
+
         self.epsilon = p['epsilon']
         self.epsilon_decay = p.get('epsilon_decay',1.0)
         self.epsilon_min = p.get('epsilon_min',self.epsilon)
@@ -349,6 +376,10 @@ class rl_runner(object):
                 self.qsa = nnet_qsa()
             mins = np.ones(state_size)*(-1.25)
             maxs = np.ones(state_size)*(1.25)
+            print("mins: " + str(mins))
+            print("maxs: " + str(maxs))
+            print("state_mins: " + str(state_mins))
+            print("state_maxs: " + str(state_maxs))
 
             #Neural network input must be normalized, set up a normalizer for the state extractor
             self.normalization_transformer = normalization_transformer()
@@ -370,8 +401,51 @@ class rl_runner(object):
             self.qsa_learner = sarsa_updater()
         else:
             self.qsa_learner = q_learning_updater()
-        self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions) 
+        self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,self.debug_level) 
 
+    def do_running_printout(self,p):
+        #the self.episode > 0 check prevents a bug where some of the printouts are empty arrays before the first episode completes
+        if(self.print_update_timer < time.time() - 1.0 and self.episode > 0):
+            clear()
+            print("Simname: " + str(self.simname))
+            print("Version: " + str(self.version))
+            print("Episodes Elapsed: " + str(self.episode))
+            print("Average Reward Per Episode: " + str(self.r_sum_avg))
+            print("Epsilon: " + str(self.epsilon))
+            print("Epsilon Decay: " + str(self.epsilon_decay))
+            print("Epsilon Min: " + str(self.epsilon_min))
+            print("Gamma: " + str(self.gamma))
+            print("Alpha (learning rate): " + str(self.alpha))
+            if(p.has_key('learning_rate_decay')):
+                print("Alpha (learning rate) decay: " + str(p['learning_rate_decay']))
+
+            if(p.has_key('learning_rate_min')):
+                print("Alpha (learning rate) Min: " + str(p['learning_rate_min']))
+            if(p.has_key('activation_function')):
+                print("activation_function: " + str(p['activation_function']))
+            if(p.has_key('activation_function_final')):
+                print("activation_function_final: " + str(p['activation_function_final']))
+            if(p.has_key('num_hidden')):
+                print("num_hidden: " + str(p['num_hidden']))
+            if(p.has_key('rbf_transform_size')):
+                print("rbf_transform_size: " + str(p['rbf_transform_size']))
+            if(p.has_key('rbf_width_scale')):
+                print("rbf_width_scale: " + str(p['rbf_width_scale']))
+            if(p.has_key('cluster_func') and p['cluster_func'] is not None):
+                print("clusters_selected: " + str(p['clusters_selected']))
+            if(p.has_key('nnet_use_combined_actions') and p['nnet_use_combined_actions'] is not None):
+                print("neural network combined action output: " + str(p['nnet_use_combined_actions']))
+            print("Reward Multiplier: " + str(p['reward_multiplier']))
+            print("RL Algorithm: " + str(p['rl_algo']))
+
+            print("Average Steps Per Second: " + str(1.0/self.avg_step_duration))
+            print("Action Type: " + str(p['action_type']))
+            print("a_list: " + str(self.tmp_a_list))
+            m, s = divmod(time.time() - self.start_time, 60)
+            h, m = divmod(m, 60)
+            print "Elapsed Time %d:%02d:%02d" % (h, m, s)
+            sys.stdout.flush()
+            self.print_update_timer = time.time()
 
 if __name__ == '__main__':
     g = rl_runner()

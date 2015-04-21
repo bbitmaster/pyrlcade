@@ -58,6 +58,7 @@ rbf_transform_size=20
 rbf_width_scale=1.0
 
 nnet_use_combined_actions=True
+#nnet_use_combined_actions=False
 
 #action is encoded using one hot encoding with these as the "hot" and "not hot" targets
 incorrect_target = -1.0

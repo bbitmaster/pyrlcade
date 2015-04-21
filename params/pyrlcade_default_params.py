@@ -30,7 +30,7 @@ reward_multiplier=1.0
 learning_rate = 0.4
 
 save_images=False
-image_save_dir="/home/bgoodric/tmp/" #I Guess that underutilized windows partitition with all that storage is good for something...
+image_save_dir="/home/bgoodric/tmp/1/" #I Guess that underutilized windows partitition with all that storage is good for something...
 
 qsa_type='tabular'
 
@@ -53,10 +53,11 @@ rl_algo='sarsa'
 print_state_debug=True
 
 #in sarsa mode, this tells if the SDL display should be enabled. Set to False if the machine does not have pygame installed
-do_vis=False
+vis_type='pyrlcade'
 
 #in sarsa mode, this tells how often to display, -1 for none
-showevery=500
+showevery=None
+fastforwardskip=5
 
 #these affect the display. They tell the size in pixels of the display, the axis size, and how many frames to skip
 display_width=1280
