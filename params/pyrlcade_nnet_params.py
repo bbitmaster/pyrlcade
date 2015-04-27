@@ -25,6 +25,8 @@ use_float32=True
 random_seed = 4;
 initial_r_sum_avg=-21.0
 
+reward_multiplier=0.5
+
 save_images=False
 image_save_dir="/home/bgoodric/tmp/" #I Guess that underutilized windows partitition with all that storage is good for something...
 
@@ -32,11 +34,12 @@ qsa_type='nnet'
 
 #parameters for neural network qsa
 activation_function='linear_rectifier'
+activation_function_final='linear'
 
 num_hidden=64
 learning_rate = 0.01
 learning_rate_decay_type='geometric'
-learning_rate_decay=1.0
+learning_rate_decay=0.9998
 learning_rate_min=0.0001
 momentum=0.0
 maxnorm=None
@@ -54,15 +57,17 @@ correct_target = 1.0
 
 #decay_type can be 'geometric' or 'linear'
 decay_type='geometric'
-epsilon=0.20
+epsilon=0.30
 epsilon_min=0.01
 #epsilon_decay=exp((log(epsilon_min) - log(epsilon))/10000.0)
 #print("epsilon_decay: " + str(epsilon_decay))
-epsilon_decay=0.9998
+epsilon_decay=0.9997
 #epsilon_decay = (epsilon - epsilon_min)/10000
-gamma=0.999
+gamma=0.995
 
 action_type='e_greedy'
+
+rl_algo='sarsa'
 
 #If defined, will print the state variables on every frame
 print_state_debug=True
@@ -72,6 +77,7 @@ do_vis=False
 
 #in sarsa mode, this tells how often to display, -1 for none
 showevery=500
+fastforwardskip=5
 
 #these affect the display. They tell the size in pixels of the display, the axis size, and how many frames to skip
 display_width=1280

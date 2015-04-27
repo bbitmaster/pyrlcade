@@ -11,6 +11,7 @@ from pyrlcade.state.tabular_ram_qsa import tabular_ram_qsa
 from pyrlcade.state.nnet_qsa import nnet_qsa
 from pyrlcade.state.nnet_qsa_allactions import nnet_qsa_allactions
 from pyrlcade.state.q_learning_updater import q_learning_updater
+from pyrlcade.state.q_learning_updater_replay import q_learning_updater_replay
 from pyrlcade.state.sarsa_updater import sarsa_updater
 from pyrlcade.state.pong_ram_extractor import pong_ram_extractor
 from pyrlcade.state.normalization_transformer import normalization_transformer
@@ -47,6 +48,12 @@ class rl_runner(object):
         self.sim = pyrlcade_environment()
         self.sim.init(p['rom_file'],p['ale_frame_skip'])
 
+        self.rl_algo = p['rl_algo']
+        if(p.has_key('replay_buf_size')):
+            self.replay_buf_size = p['replay_buf_size']
+        if(p.has_key('minibatch_size')):
+            self.minibatch_size = p['minibatch_size']
+
         self.init_sim(p)
 
         if(p.has_key('vis_type')):
@@ -59,12 +66,16 @@ class rl_runner(object):
         save_interval = p['save_interval']
 
         self.showevery = p['showevery']
-        self.fastforwardskip = p['fastforwardskip']
+        if(p.has_key('fastforwardskip')):
+            self.fastforwardskip = p['fastforwarfskip']
+        else:
+            self.fastforwardskip = 5
 
         self.reward_multiplier = p['reward_multiplier']
 
         #This flag is set to true if we get NaN values somewhere, which isn't supposed to happen
         self.nan_output = False
+
 
         self.do_vis = False
         if(self.vis_type == 'pyrlcade'):
@@ -92,6 +103,7 @@ class rl_runner(object):
         self.r_sum_list     = []
         self.r_sum_avg_list = []
 
+
         while 1:
             self.step = 0 
             ##initialize s
@@ -105,6 +117,8 @@ class rl_runner(object):
             #repeat steps
             quit = False
             save_and_exit = False
+
+            self.max_qsa_list = []
 
             while 1:
                 #zero the bias neuron...
@@ -129,20 +143,20 @@ class rl_runner(object):
                 #todo: qsa_prime can be saved and reused for qsa_tmp
                 #qsa_tmp = self.qsa.load(self.s,self.a)
                 given_reward = self.r*self.reward_multiplier
-                self.qsa_learner.update(self.alpha,self.s,self.a,given_reward,self.s_prime,self.a_prime,self.qsa_prime_list)
+                self.qsa_learner.update(self.alpha,self.s,self.a,given_reward,self.s_prime,self.a_prime,self.qsa_prime_list,is_terminal)
                 #self.qsa_learner.store(self.s,self.a,self.qsa_tmp +  \
                 #    self.alpha*(self.r + self.gamma*self.qsa_learner.load(self.s_prime,self.a_prime) - self.qsa_tmp)) 
-                
-                if(self.debug_level >= 2):
-                    sys.stdout.write("ep: " + str(self.episode) + " step: " + str(self.step) + (" qsa: %2.4f" %(self.qsa_tmp[self.a])) + "r: " + str(self.r) + " a: " + str(self.a))
+
                 if(self.debug_level >= 3):
+                    sys.stdout.write("ep: " + str(self.episode) + " step: " + str(self.step) + (" qsa: %2.4f" %(self.qsa_tmp[self.a])) + "r: " + str(self.r) + " a: " + str(self.a))
+                if(self.debug_level >= 4):
                     sys.stdout.write(" state:")
                     for i in range(min(5,len(self.s))):
                         sys.stdout.write(" %2.4f" % self.s[i])
-                if(self.debug_level >= 2):
+                if(self.debug_level >= 3):
                     sys.stdout.write("\n")
 
-                if(self.debug_level >= 5):
+                if(self.debug_level >= 6):
                     sys.stdout.write("largest states: ")
                     s_sorted = np.sort(self.s)[::-1][0:8]
                     for i in range(min(8,len(s_sorted))):
@@ -212,6 +226,7 @@ class rl_runner(object):
                 self.s = self.s_prime
                 self.a = self.a_prime
                 self.qsa_tmp = self.qsa_prime_list
+                self.max_qsa_list.append(max(self.qsa_tmp))
 
 
                 #print("Next Step \n")
@@ -224,7 +239,11 @@ class rl_runner(object):
             if(self.debug_level >= 1):
                 m, s = divmod(time.time() - self.start_time, 60)
                 h, m = divmod(m, 60)
-                print(("ep: %d" % self.episode) + (" epsilon: %2.4f" %self.epsilon) + " total reward: " + str(self.r_sum) + (" avg_reward: %2.4f" % self.r_sum_avg) + (" steps_per_sec: %2.4f" % (1.0/self.avg_step_duration)) + (" Elapsed Time %d:%02d:%02d" % (h, m, s)))
+                sys.stdout.write(("ep: %d" % self.episode) + (" epsilon: %2.4f" %self.epsilon) + " total reward: " + str(self.r_sum) + (" avg_reward: %2.4f" % self.r_sum_avg) + (" steps_per_sec: %2.4f" % (1.0/self.avg_step_duration)))
+                if(self.rl_algo == "q_learning_replay"):
+                    sys.stdout.write(" r_buf_size: " + str(self.qsa_learner.replay_buff.buf_size))
+                sys.stdout.write(" avg qsa: " + str(np.mean(np.array(self.max_qsa_list))))
+                print((" Elapsed Time %d:%02d:%02d" % (h, m, s)))
 
             if(p['decay_type'] == 'geometric'):
                 self.epsilon = self.epsilon * self.epsilon_decay
@@ -360,6 +379,7 @@ class rl_runner(object):
 
         (state_size,state_mins,state_maxs) = self.state_ram_extractor.get_size_and_range()
 
+        state_input_size = state_size
         self.alpha = p['learning_rate']
         if(p.has_key('nnet_use_combined_actions') and p['nnet_use_combined_actions'] == True):
             self.use_combined_actions = True
@@ -386,7 +406,7 @@ class rl_runner(object):
             self.normalization_transformer.init(state_mins,state_maxs,mins,maxs)
             self.state_ram_extractor.set_transform_class(self.normalization_transformer)
 
-            nnet_size = state_size
+            state_input_size = state_size
             #set up a radial basis network transformer
             if(p.has_key('do_rbf_transform') and p['do_rbf_transform'] == True):
                 self.rbf_transformer = state_expander_transformer()
@@ -394,14 +414,19 @@ class rl_runner(object):
                 self.rbf_width_scale = p['rbf_width_scale']
                 self.rbf_transformer.init(mins,maxs,self.rbf_size,self.rbf_width_scale)
                 self.normalization_transformer.set_transform_class(self.rbf_transformer)
-                nnet_size = self.rbf_size
-            self.qsa.init(nnet_size,self.num_actions,p)
+                state_input_size = self.rbf_size
+            self.qsa.init(state_input_size,self.num_actions,p)
 
-        if(p['rl_algo'] == 'sarsa'):
+        if(self.rl_algo == 'sarsa'):
             self.qsa_learner = sarsa_updater()
-        else:
+            self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,state_input_size,self.debug_level) 
+        elif(self.rl_algo == 'q_learning'):
             self.qsa_learner = q_learning_updater()
-        self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,self.debug_level) 
+            self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,state_input_size,self.debug_level) 
+        elif(self.rl_algo == 'q_learning_replay'):
+            self.qsa_learner = q_learning_updater_replay()
+            self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,state_input_size,self.replay_buf_size,self.minibatch_size,self.debug_level) 
+
 
     def do_running_printout(self,p):
         #the self.episode > 0 check prevents a bug where some of the printouts are empty arrays before the first episode completes

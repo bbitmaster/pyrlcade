@@ -1,0 +1,17 @@
+*.pyc
+
+#ignore all data files
+*.h5py
+*.tar
+*.zip
+*.tar.gz
+*.swp
+
+#This file contains a secret string 'mongodb_machine' that tells the machine where we keep a mongodb for hyperopt
+pyrlcade_hyperopt_tests/mongodb_machine.py
+
+#ignore all of the machine launch scripts -- these reference specific utk university machines that no-one else will have access to.
+pyrlcade_hyperopt_tests/machine_launchers/*.sh
+!pyrlcade_hyperopt_tests/machine_launchers/default_launcher.sh
+!pyrlcade_hyperopt_tests/machine_launchers/README.md
+

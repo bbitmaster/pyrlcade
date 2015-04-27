@@ -4,13 +4,13 @@ import pyrlcade
 
 class q_learning_updater(object):
     
-    def init(self,update_storage,gamma,use_multiactionnet,debug_level):
+    def init(self,update_storage,gamma,use_multiactionnet,state_input_size,debug_level):
         self.gamma = gamma
         self.storage = update_storage
         self.use_multiactionnet = use_multiactionnet
         self.debug_level = debug_level
 
-    def update(self,alpha,state,action,reward,s_prime,a_prime,qsa_prime_list):
+    def update(self,alpha,state,action,reward,s_prime,a_prime,qsa_prime_list,is_terminal):
         qsa_prime_max = np.max(qsa_prime_list)
 
         if(self.debug_level >= 4):

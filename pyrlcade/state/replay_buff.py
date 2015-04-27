@@ -2,7 +2,7 @@
 import numpy as np
 
 class replay_buff(object):
-    def init(self,state_size,max_buf_size):
+    def init(self,state_size,max_buf_size,debug_level=1):
         self.s = np.zeros((state_size,max_buf_size),dtype=np.float32)
         self.s2 = np.zeros((state_size,max_buf_size),dtype=np.float32)
         self.a = np.zeros((max_buf_size))
@@ -12,6 +12,7 @@ class replay_buff(object):
         self.buf_size = 0
         self.shuffled_size=0
         self.load_index=0
+        self.debug_level = debug_level
 
     def insert(self,s,a,r,s2,term):
         if(self.buf_size < self.max_buf_size):
@@ -33,11 +34,16 @@ class replay_buff(object):
             return
         #reset load index to 0 if it goes beyond what has been stored
         if(self.buf_size < self.load_index+minibatch_size):
+            if(self.debug_level >= 2):
+                print("shuffling r_buff load_index: " + str(self.load_index) + " buf_size: " + str(self.buf_size) + " self.shuffled_size: " + str(self.shuffled_size) + " 1")
             self.shuffle()
             self.load_index = 0
 
         if(self.load_index > self.shuffled_size):
+            if(self.debug_level >= 2):
+                print("shuffling r_buff load_index: " + str(self.load_index) + " buf_size: " + str(self.buf_size) + " self.shuffled_size: " + str(self.shuffled_size) + " 2")
             self.shuffle()
+            self.load_index = 0
         s = self.s[:,self.load_index:(self.load_index+minibatch_size)]
         a = self.a[self.load_index:(self.load_index+minibatch_size)]
         r = self.r[self.load_index:(self.load_index+minibatch_size)]
@@ -47,7 +53,6 @@ class replay_buff(object):
         return (s,a,r,s2,term)
 
     def shuffle(self):
-        #print("shuffling.")
         rng_state = np.random.get_state()
         np.random.shuffle(self.s.T[0:self.buf_size])
         np.random.set_state(rng_state)
