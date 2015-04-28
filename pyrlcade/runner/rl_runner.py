@@ -21,6 +21,11 @@ class rl_runner(object):
     def run_sim(self,p):
         #init printout options
 
+        print("Parameters: ")
+        for k,v in p.items():
+            if(k[0:2] == '__'):
+                continue
+            print(str(k) + " : " + str(v))
         #The 1-second printout, off by default, can be turned on
         if(p.has_key('running_printout')):
             self.running_printout = p['running_printout']
