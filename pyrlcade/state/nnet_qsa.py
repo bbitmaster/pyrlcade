@@ -27,8 +27,8 @@ class nnet_qsa(object):
             layers.append(nnet.layer(p['num_hidden'],p['activation_function'],
                                      initialization_scheme=p['initialization_scheme'],
                                      initialization_constant=p['initialization_constant'],
-                                     dropout=p['dropout'],use_float32=p['use_float32'],
-                                     momentum=p['momentum'],maxnorm=p['maxnorm'],step_size=p['learning_rate']))
+                                     dropout=p.get('dropout',None),use_float32=p['use_float32'],
+                                     momentum=p['momentum'],maxnorm=p.get('maxnorm',None),step_size=p['learning_rate']))
         layers.append(nnet.layer(1,p['activation_function_final'],
                                  initialization_scheme=p['initialization_scheme_final'],
                                  initialization_constant=p['initialization_constant_final'],
@@ -82,7 +82,7 @@ class nnet_qsa(object):
             state = state[:,np.newaxis]
 
         #build matrix of one hot actions
-        action_list = np.ones((self.num_actions,action.shape[0]))*self.incorrect_target
+        action_list = np.ones((self.num_actions,action.shape[0]),dtype=np.float32)*self.incorrect_target
         for i in range(action.shape[0]):
             action_list[action[i],i] = self.correct_target
 
@@ -108,7 +108,7 @@ class nnet_qsa(object):
             action = np.array([action])
             state = state[:,np.newaxis]
         #build matrix of one hot actions
-        action_list = np.ones((self.num_actions,action.shape[0]))*self.incorrect_target
+        action_list = np.ones((self.num_actions,action.shape[0]),dtype=np.float32)*self.incorrect_target
         for i in range(action.shape[0]):
             action_list[action[i],i] = self.correct_target
         #append state matrix to action matrix

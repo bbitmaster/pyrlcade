@@ -5,7 +5,7 @@ class replay_buff(object):
     def init(self,state_size,max_buf_size,debug_level=1):
         self.s = np.zeros((state_size,max_buf_size),dtype=np.float32)
         self.s2 = np.zeros((state_size,max_buf_size),dtype=np.float32)
-        self.a = np.zeros((max_buf_size))
+        self.a = np.zeros((max_buf_size),dtype=np.float32)
         self.r = np.zeros((max_buf_size),dtype=np.float32)
         self.term = np.zeros((max_buf_size),dtype=np.int)
         self.max_buf_size = max_buf_size

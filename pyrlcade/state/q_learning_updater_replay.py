@@ -43,6 +43,16 @@ class q_learning_updater_replay(object):
         #r + gamma*qsa_prime_max
         update = r + np.invert(term.astype(np.bool))*(self.gamma*qsa_prime_max)
 
+        #print("s dtype: " + str(s.dtype))
+        #print("a dtype: " + str(a.dtype))
+        #print("r dtype: " + str(r.dtype))
+        #print("s_prime dtype: " + str(s_prime.dtype))
+        #print("term dtype: " + str(term.dtype))
+        #print("s_prime_repeat dtype: " + str(s_prime_repeat.dtype))
+        #print("action_possibilities dtype: " + str(action_possibilities.dtype))
+        #print("qsa_prime_allactions dtype: " + str(qsa_prime_allactions.dtype))
+        #print("qsa_prime_max dtype: " + str(qsa_prime_max.dtype))
+        #print("update dtype: " + str(update.dtype))
         self.storage.update(alpha,s,a,update)
 
     def get_qsa_list(self,state):

@@ -152,6 +152,9 @@ class rl_runner(object):
                 #self.qsa_learner.store(self.s,self.a,self.qsa_tmp +  \
                 #    self.alpha*(self.r + self.gamma*self.qsa_learner.load(self.s_prime,self.a_prime) - self.qsa_tmp)) 
 
+                #temp print to see nn datatype
+                #print(self.qsa.net.layer[0].saved_selected_neurons.dtype)
+
                 if(self.debug_level >= 3):
                     sys.stdout.write("ep: " + str(self.episode) + " step: " + str(self.step) + (" qsa: %2.4f" %(self.qsa_tmp[self.a])) + "r: " + str(self.r) + " a: " + str(self.a))
                 if(self.debug_level >= 4):
