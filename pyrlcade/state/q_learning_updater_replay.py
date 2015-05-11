@@ -6,7 +6,7 @@ from pyrlcade.state.replay_buff import replay_buff
 class q_learning_updater_replay(object):
     
     def init(self,update_storage,gamma,use_multiactionnet,
-            state_input_size,replay_buf_size,minibatch_size,debug_level):
+            state_input_size,replay_buf_size,minibatch_size,debug_level,update_freeze_rate):
         self.gamma = gamma
         self.storage = update_storage
         self.use_multiactionnet = use_multiactionnet
@@ -16,6 +16,8 @@ class q_learning_updater_replay(object):
         self.state_input_size = state_input_size
         self.replay_buf_size = replay_buf_size
         self.minibatch_size = minibatch_size
+        self.update_freeze_rate = update_freeze_rate
+        self.update_count = 0
 
 
     def update(self,alpha,state,action,reward,s_prime,a_prime,qsa_prime_list,is_terminal):
@@ -54,6 +56,15 @@ class q_learning_updater_replay(object):
         #print("qsa_prime_max dtype: " + str(qsa_prime_max.dtype))
         #print("update dtype: " + str(update.dtype))
         self.storage.update(alpha,s,a,update)
+
+        if(self.update_freeze_rate is not None):
+            if(type(self.storage) is pyrlcade.state.nnet_qsa.nnet_qsa):
+                if((self.update_count % self.update_freeze_rate) == 0):
+                    self.storage.create_frozen_qsa_storage()
+                    if(self.debug_level >= 2):
+                        print('freezing net...')
+                self.update_count +=1
+
 
     def get_qsa_list(self,state):
         if(self.use_multiactionnet):

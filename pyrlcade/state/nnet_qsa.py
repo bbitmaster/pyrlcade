@@ -2,6 +2,7 @@
 from nnet_toolkit import nnet
 import numpy as np
 import pyrlcade.misc.cluster_select_func as csf
+from copy import deepcopy
 
 class nnet_qsa(object):
     def init(self,state_size,num_actions,p):
@@ -28,12 +29,13 @@ class nnet_qsa(object):
                                      initialization_scheme=p['initialization_scheme'],
                                      initialization_constant=p['initialization_constant'],
                                      dropout=p.get('dropout',None),use_float32=p['use_float32'],
-                                     momentum=p['momentum'],maxnorm=p.get('maxnorm',None),step_size=p['learning_rate']))
+                                     momentum=p['momentum'],maxnorm=p.get('maxnorm',None),step_size=p['learning_rate'],rms_prop_rate=p.get('rms_prop_rate',None)))
+
         layers.append(nnet.layer(1,p['activation_function_final'],
                                  initialization_scheme=p['initialization_scheme_final'],
                                  initialization_constant=p['initialization_constant_final'],
                                  use_float32=p['use_float32'],
-                                 momentum=p['momentum'],step_size=p['learning_rate']))
+                                 momentum=p['momentum'],step_size=p['learning_rate'],rms_prop_rate=p.get('rms_prop_rate',None)))
         self.net = nnet.net(layers)
 
         self.do_neuron_clustering=False #by default
@@ -88,6 +90,7 @@ class nnet_qsa(object):
 
         #append state matrix to action matrix
         s = np.append(state,action_list,axis=0)
+        
         self.net.input = s
         self.net.feed_forward()
 
@@ -113,9 +116,20 @@ class nnet_qsa(object):
             action_list[action[i],i] = self.correct_target
         #append state matrix to action matrix
         s = np.append(state,action_list,axis=0)
-        self.net.input = s
-        self.net.feed_forward()
-        return self.net.output[0]
+
+        if(hasattr(self,'frozen_net')):
+            net = self.frozen_net
+        else:
+            net = self.net
+        net.input = s
+        net.feed_forward()
+        return net.output[0]
+
+    def create_frozen_qsa_storage(self):
+        self.frozen_net = deepcopy(self.net)
+
+    def delete_frozen_qsa_storage(self):
+        del self.frozen_qsa_net
 
 if __name__ == '__main__':
     #TODO: tests?

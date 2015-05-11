@@ -4,11 +4,13 @@ import pyrlcade
 
 class sarsa_updater(object):
     
-    def init(self,update_storage,gamma,use_multiactionnet,state_input_size,debug_level):
+    def init(self,update_storage,gamma,use_multiactionnet,state_input_size,debug_level,update_freeze_rate):
         self.gamma = gamma
         self.storage = update_storage
         self.use_multiactionnet = use_multiactionnet
         self.debug_level = debug_level
+        self.update_freeze_rate = update_freeze_rate
+        self.update_count = 0
 
     def update(self,alpha,state,action,reward,s_prime,a_prime,qsa_prime_list,is_terminal):
         qsa_prime = qsa_prime_list[a_prime]
@@ -23,6 +25,16 @@ class sarsa_updater(object):
             qsa = np.copy(self.storage.load(state,action))
             print("Sarsa Updater: reward: " + str(reward) + (" qsa before: %2.7f" % qsa_old) + (" after: %2.7f" % qsa))
 
+        if(self.update_freeze_rate is not None):
+            if(type(self.storage) is pyrlcade.state.nnet_qsa.nnet_qsa):
+                if((self.update_count % self.update_freeze_rate) == 0):
+                    self.storage.create_frozen_qsa_storage()
+                    if(self.debug_level >= 2):
+                        print('freezing net...')
+                self.update_count +=1
+
+                
+            
     def get_qsa_list(self,state):
         if(self.use_multiactionnet):
             return self.storage.loadall(state)

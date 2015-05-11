@@ -59,6 +59,11 @@ class rl_runner(object):
         if(p.has_key('minibatch_size')):
             self.minibatch_size = p['minibatch_size']
 
+        if(p.has_key('update_freeze_rate')):
+            self.update_freeze_rate = p['update_freeze_rate']
+        else:
+            self.update_freeze_rate = None
+
         self.init_sim(p)
 
         if(p.has_key('vis_type')):
@@ -72,7 +77,7 @@ class rl_runner(object):
 
         self.showevery = p['showevery']
         if(p.has_key('fastforwardskip')):
-            self.fastforwardskip = p['fastforwarfskip']
+            self.fastforwardskip = p['fastforwardskip']
         else:
             self.fastforwardskip = 5
 
@@ -250,6 +255,7 @@ class rl_runner(object):
                 sys.stdout.write(("ep: %d" % self.episode) + (" epsilon: %2.4f" %self.epsilon) + " total reward: " + str(self.r_sum) + (" avg_reward: %2.4f" % self.r_sum_avg) + (" steps_per_sec: %2.4f" % (1.0/self.avg_step_duration)))
                 if(self.rl_algo == "q_learning_replay"):
                     sys.stdout.write(" r_buf_size: " + str(self.qsa_learner.replay_buff.buf_size))
+                #TODO: The below line throws a warning when the simulation ends and max_qsa_list is empty, fix this.
                 sys.stdout.write(" avg qsa: " + str(np.mean(np.array(self.max_qsa_list))))
                 print((" Elapsed Time %d:%02d:%02d" % (h, m, s)))
 
@@ -427,13 +433,13 @@ class rl_runner(object):
 
         if(self.rl_algo == 'sarsa'):
             self.qsa_learner = sarsa_updater()
-            self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,state_input_size,self.debug_level) 
+            self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,state_input_size,self.debug_level,self.update_freeze_rate) 
         elif(self.rl_algo == 'q_learning'):
             self.qsa_learner = q_learning_updater()
-            self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,state_input_size,self.debug_level) 
+            self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,state_input_size,self.debug_level,self.update_freeze_rate) 
         elif(self.rl_algo == 'q_learning_replay'):
             self.qsa_learner = q_learning_updater_replay()
-            self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,state_input_size,self.replay_buf_size,self.minibatch_size,self.debug_level) 
+            self.qsa_learner.init(self.qsa,self.gamma,self.use_combined_actions,state_input_size,self.replay_buf_size,self.minibatch_size,self.debug_level,self.update_freeze_rate) 
 
 
     def do_running_printout(self,p):

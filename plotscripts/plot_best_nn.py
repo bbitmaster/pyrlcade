@@ -1,13 +1,18 @@
+#!/usr/bin/env python
 import numpy as np
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pyrlcade.misc.save_h5py import save_results,load_results
 import sys
 
-def plot_results(results):
+def plot_results(results,color=None):
     res = np.array(results['r_sum_avg_list'])
-    plt.plot(np.arange(res.shape[0])+1,res)
+    #if color is not None:
+    #    plt.plot(np.arange(res.shape[0])+1,res)
+    #else:
+    plt.plot(np.arange(res.shape[0])+1,res,color=color)
 
 def calc_polyfit(results):
     steps = np.array(results['r_sum_avg_list'])
@@ -33,13 +38,21 @@ if __name__ == '__main__':
     execfile(params_file,p)
     
     for plot in p['plot_list']:
-        for f in plot['plot_files']:
+        for i,f in enumerate(plot['plot_files']):
             res_filename = f
             print('loading: ' + res_filename)
             res = load_results(res_filename)
-            plot_results(res)
+            #if(plot.has_key('use_hsv') and plot['use_hsv'] == True):
+            idx = float(i)/float(len(plot['plot_files']))
+            print("i: " + str(i) + " idx: " + str(idx))
+            plot_results(res,color=plt.cm.hsv(idx))
+            #else:
+            #print("blah")
+            #plot_results(res)
         plt.legend(plot['legend'],'upper left',prop={'size': 6})
         plt.axis(plot['axis'])
+        if(plot.has_key('title')):
+            plt.title(plot['title'])
 
         plt.xlabel(plot['xlabel'])
         plt.ylabel(plot['ylabel'])
