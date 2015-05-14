@@ -56,7 +56,7 @@ print_state_debug=True
 vis_type='pyrlcade'
 
 #in sarsa mode, this tells how often to display, -1 for none
-showevery=None
+showevery=500
 fastforwardskip=5
 
 #these affect the display. They tell the size in pixels of the display, the axis size, and how many frames to skip

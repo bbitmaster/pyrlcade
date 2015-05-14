@@ -16,6 +16,7 @@ from pyrlcade.state.sarsa_updater import sarsa_updater
 from pyrlcade.state.pong_ram_extractor import pong_ram_extractor
 from pyrlcade.state.normalization_transformer import normalization_transformer
 from pyrlcade.state.state_expander_transformer import state_expander_transformer
+from pyrlcade.misc.key_action_transformer import transform_keys
 
 class rl_runner(object):
     def run_sim(self,p):
@@ -26,11 +27,11 @@ class rl_runner(object):
             if(k[0:2] == '__'):
                 continue
             print(str(k) + " : " + str(v))
+        del k
+        del v
+
         #The 1-second printout, off by default, can be turned on
-        if(p.has_key('running_printout')):
-            self.running_printout = p['running_printout']
-        else:
-            self.running_printout = False
+        self.running_printout = p.get('running_printout',False)
 
         #the debug verbosity level, 1 by default
         #These are the debug levels:
@@ -41,10 +42,8 @@ class rl_runner(object):
         #    -- current reward
         #3   -- current state (first 5 variables only)
         #4   -- additional TD-update information
-        if(p.has_key('debug_level')):
-            self.debug_level = p['debug_level']
-        else:
-            self.debug_level = 1
+
+        self.debug_level = p.get('debug_level',1)
 
         #init random number generator from seed
         np.random.seed(p['random_seed']);
@@ -59,33 +58,26 @@ class rl_runner(object):
         if(p.has_key('minibatch_size')):
             self.minibatch_size = p['minibatch_size']
 
-        if(p.has_key('update_freeze_rate')):
-            self.update_freeze_rate = p['update_freeze_rate']
-        else:
-            self.update_freeze_rate = None
+        self.update_freeze_rate = p.get('update_freeze_rate',None)
 
         self.init_sim(p)
 
-        if(p.has_key('vis_type')):
-            self.vis_type = p['vis_type']
-        else:
-            self.vis_type = None
+        self.vis_type = p.get('vis_type',None)
+
+        self.keyboard_input = p.get('keyboard_input',False)
 
         self.save_images = p.get('save_images',False)
         self.image_save_dir = p.get('image_save_dir',None)
         save_interval = p['save_interval']
 
         self.showevery = p['showevery']
-        if(p.has_key('fastforwardskip')):
-            self.fastforwardskip = p['fastforwardskip']
-        else:
-            self.fastforwardskip = 5
+        
+        self.fastforwardskip = p.get('fastforwardskip',5)
 
         self.reward_multiplier = p['reward_multiplier']
 
         #This flag is set to true if we get NaN values somewhere, which isn't supposed to happen
         self.nan_output = False
-
 
         self.do_vis = False
         if(self.vis_type == 'pyrlcade'):
@@ -149,6 +141,9 @@ class rl_runner(object):
                 #choose a' from s' using policy derived from Q
                 (self.a_prime,self.qsa_prime_list) = self.choose_action(self.s_prime,p)
                 
+                #do debugging with keyboard input
+                if(self.keyboard_input):
+                    self.a_prime = transform_keys(v.get_keys())
                 #Q(s,a) <- Q(s,a) + alpha[r + gamma*Q(s_prime,a_prime) - Q(s,a)]
                 #todo: qsa_prime can be saved and reused for qsa_tmp
                 #qsa_tmp = self.qsa.load(self.s,self.a)
@@ -389,9 +384,15 @@ class rl_runner(object):
 
         self.num_actions = self.sim.ale.getMinimalActionSet().size
 
-        self.state_ram_extractor = pong_ram_extractor()
+        if(p['qsa_type'] == 'tabular'):
+            tabular_granularity = True
+        else:
+            tabular_granularity = False
+        self.state_ram_extractor = pong_ram_extractor(tabular_granularity)
 
         (state_size,state_mins,state_maxs) = self.state_ram_extractor.get_size_and_range()
+        print("state_mins: " + str(state_mins))
+        print("state_maxs: " + str(state_maxs))
 
         state_input_size = state_size
         self.alpha = p['learning_rate']
@@ -412,8 +413,6 @@ class rl_runner(object):
             maxs = np.ones(state_size)*(1.25)
             print("mins: " + str(mins))
             print("maxs: " + str(maxs))
-            print("state_mins: " + str(state_mins))
-            print("state_maxs: " + str(state_maxs))
 
             #Neural network input must be normalized, set up a normalizer for the state extractor
             self.normalization_transformer = normalization_transformer()

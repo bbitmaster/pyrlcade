@@ -16,6 +16,8 @@ class normalization_transformer(object):
 
     def transform(self,state):
         s = state.astype(np.float32)
+        #print('arr_mins: ' + str(self.arr_mins))
+        #print('s: ' + str(s))
         s = np.minimum(s,self.arr_maxs)
         s = np.maximum(s,self.arr_mins)
         s = s/(self.arr_maxs)

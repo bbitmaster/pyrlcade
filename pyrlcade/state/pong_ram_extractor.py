@@ -2,8 +2,12 @@
 import numpy as np
 
 class pong_ram_extractor(object):
-    def __init__(self):
-        self.divs = np.array([33,5,1,1,5])
+    def __init__(self,tabular):
+        if(tabular):
+            self.divs = np.array([33,5,1,1,5])
+        else:
+            print('not tabular')
+            self.divs = np.array([1,1,1,1,1])
         self.mins = np.array([0x32,0x26,9,7,0x26])
         self.maxs = np.array([0xCD,0xCB,11,13,0xCB])
 
@@ -30,12 +34,14 @@ class pong_ram_extractor(object):
         #0x38 ball y velocity -5 to 5
         #0x3A ball x velocity -5 to 5
         #0x3c player y 26-CB
-        state = np.array(ram[[0x31,0x36,0x38,0x3A,0x3C]],dtype=np.uint8)
+        state = np.array(ram[[0x31,0x36,0x38,0x3A,0x3C]])
         #these are signed bytes
         state[2] += 10
         state[3] += 10
         state = state - self.mins
         state = state/self.divs
+        #print('state_2: ' + str(state[2]))
+        #print('state_dtype: ' + str(state.dtype))
         if(self.transform_class is None):
             return state
         else:
