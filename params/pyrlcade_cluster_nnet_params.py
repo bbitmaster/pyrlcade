@@ -17,7 +17,7 @@ data_dir = '../data/'
 save_interval = 15*60
 
 #run for a total number of episodes
-train_episodes=10000
+train_episodes=20000
 max_steps=10000
 
 use_float32=True
@@ -57,6 +57,12 @@ cluster_speed=0.0
 #action is encoded using one hot encoding with these as the "hot" and "not hot" targets
 incorrect_target = -1.0
 correct_target = 1.0
+
+earlyendepisode1=4000
+earlyendreward1=-20.5
+
+earlyendepisode2=10000
+earlyendreward2=-15.0
 
 reward_multiplier=0.1
 

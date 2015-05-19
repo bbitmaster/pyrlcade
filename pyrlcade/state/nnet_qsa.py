@@ -53,8 +53,8 @@ class nnet_qsa(object):
             if(p.has_key('do_cosinedistance') and p['do_cosinedistance']):
                 self.net.layer[0].do_cosinedistance = True
                 print('cosine set to true')
-
-
+        self.max_update = 0.0
+        self.grad_clip = p.get('grad_clip',None)
 
     def store(self,state,action,value):
         s = state
@@ -95,7 +95,13 @@ class nnet_qsa(object):
         self.net.feed_forward()
 
         self.net.error = -(value - self.net.output)
-
+        #print the largest update so far
+        if(np.max(np.abs(self.net.error)) > np.abs(self.max_update)):
+            self.max_update = np.max(np.abs(self.net.error))
+        #gradient clipping
+        if(self.grad_clip is not None):
+            self.net.error[self.net.error > self.grad_clip] = self.grad_clip
+            self.net.error[self.net.error < -self.grad_clip] = -self.grad_clip
         self.net.back_propagate()
         self.net.update_weights()
 

@@ -36,12 +36,13 @@ class rl_runner(object):
         #the debug verbosity level, 1 by default
         #These are the debug levels:
         #1 - episode level printouts
-        #2 - step level printouts showing
+        #2 - episode level printouts with additonal printout
+        #3 - step level printouts showing
         #    -- current qsa
         #    -- current action
         #    -- current reward
-        #3   -- current state (first 5 variables only)
-        #4   -- additional TD-update information
+        #4   -- current state (first 5 variables only)
+        #5   -- additional TD-update information
 
         self.debug_level = p.get('debug_level',1)
 
@@ -75,6 +76,13 @@ class rl_runner(object):
         self.fastforwardskip = p.get('fastforwardskip',5)
 
         self.reward_multiplier = p['reward_multiplier']
+
+        self.earlyendepisode = np.zeros(10)
+        self.earlyendreward = np.zeros(10)
+        for i in range(9):
+            self.earlyendepisode[i] = p.get('earlyendepisode' + str(i),0)
+            self.earlyendreward[i] = p.get('earlyendreward' + str(i),0)
+
 
         #This flag is set to true if we get NaN values somewhere, which isn't supposed to happen
         self.nan_output = False
@@ -239,6 +247,7 @@ class rl_runner(object):
 
                 #print("Next Step \n")
                 self.step += 1
+                self.total_steps += 1
                 self.avg_step_duration = 0.995*self.avg_step_duration + (1.0 - 0.995)*(time.time() - step_duration_timer)
                 step_duration_timer = time.time()
                 #end step loop
@@ -247,12 +256,12 @@ class rl_runner(object):
             if(self.debug_level >= 1):
                 m, s = divmod(time.time() - self.start_time, 60)
                 h, m = divmod(m, 60)
-                sys.stdout.write(("ep: %d" % self.episode) + (" epsilon: %2.4f" %self.epsilon) + " total reward: " + str(self.r_sum) + (" avg_reward: %2.4f" % self.r_sum_avg) + (" steps_per_sec: %2.4f" % (1.0/self.avg_step_duration)))
+                sys.stdout.write(("ep: %d" % self.episode) + (" epsilon: %2.4f" %self.epsilon) + " total r: " + str(self.r_sum) + (" avg_r: %2.4f" % self.r_sum_avg) + (" total_steps: %d" % self.total_steps) + (" steps/sec: %2.4f" % (1.0/self.avg_step_duration)))
                 if(self.rl_algo == "q_learning_replay"):
                     sys.stdout.write(" r_buf_size: " + str(self.qsa_learner.replay_buff.buf_size))
                 #TODO: The below line throws a warning when the simulation ends and max_qsa_list is empty, fix this.
                 sys.stdout.write(" avg qsa: " + str(np.mean(np.array(self.max_qsa_list))))
-                print((" Elapsed Time %d:%02d:%02d" % (h, m, s)))
+                print((" Time %d:%02d:%02d" % (h, m, s)))
 
             if(p['decay_type'] == 'geometric'):
                 self.epsilon = self.epsilon * self.epsilon_decay
@@ -267,6 +276,12 @@ class rl_runner(object):
             elif(p.has_key('learning_rate_decay_type') and p['learning_rate_decay_type'] == 'linear'):
                 self.alpha = self.alpha - p['learning_rate_decay']
                 self.alpha = max(p['learning_rate_min'],self.alpha)
+
+
+            for i in range(9):
+                if(self.earlyendepisode[i] > 0 and self.episode == self.earlyendepisode[i] and self.r_sum_avg < self.earlyendreward[i]):
+                    print("ending early")
+                    save_and_exit = True
 
 
             if(time.time() - save_time > save_interval or save_and_exit == True):
@@ -338,6 +353,9 @@ class rl_runner(object):
         self.results['gamma'] = np.array(self.gamma)
         self.results['nan_output'] = np.array(self.nan_output)
         self.results['episode'] = np.array(self.episode)
+        self.results['total_steps'] = np.array(self.total_steps)
+        self.results['runtime'] = np.array(time.time() - self.start_time)
+        self.results['time'] = np.array(time.time())
         self.results['os'] = os.uname()[1]
         self.results['parameters'] = p
         #TODO: save and load more hyperparameters, such as game memory?
@@ -381,6 +399,7 @@ class rl_runner(object):
         self.gamma = p['gamma']
 
         self.episode = 0
+        self.total_steps=0
 
         self.num_actions = self.sim.ale.getMinimalActionSet().size
 

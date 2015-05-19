@@ -10,6 +10,16 @@
 #This file contains a secret string 'mongodb_machine' that tells the machine where we keep a mongodb for hyperopt
 pyrlcade_hyperopt_tests/mongodb_machine.py
 
+#ignore all parameters except specific ones
+params/
+!params/pyrlcade_cluster_nnet_minibatch_params.py
+!params/pyrlcade_cluster_nnet_params.py
+!params/pyrlcade_default_params.py
+!params/pyrlcade_nnet_params.py
+!params/pyrlcade_optimize_params.py
+!paramspyrlcade_rbf_linear_params.py
+
+
 #ignore all of the machine launch scripts -- these reference specific utk university machines that no-one else will have access to.
 pyrlcade_hyperopt_tests/machine_launchers/*.sh
 !pyrlcade_hyperopt_tests/machine_launchers/default_launcher.sh
