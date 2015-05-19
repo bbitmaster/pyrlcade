@@ -58,12 +58,6 @@ cluster_speed=0.0
 incorrect_target = -1.0
 correct_target = 1.0
 
-earlyendepisode1=4000
-earlyendreward1=-20.5
-
-earlyendepisode2=10000
-earlyendreward2=-15.0
-
 reward_multiplier=0.1
 
 #decay_type can be 'geometric' or 'linear'
