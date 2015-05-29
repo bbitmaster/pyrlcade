@@ -5,9 +5,6 @@ def cluster_select_func(self):
 
     if(hasattr(self,'alternate_clustering_input')):
         inp = self.alternate_clustering_input
-#        print("alternate used...")
-#        print("alternate_clustering_input_shape: " + str(self.alternate_clustering_input.shape) + " net.input.shape:  " +
-#                str(self.input.shape))
     else:
         inp = self.input
     
@@ -26,7 +23,6 @@ def cluster_select_func(self):
     else:
         self.distances = np.sum(self.centroids**2,1)[:,np.newaxis] - 2*np.dot(self.centroids,inp) + \
                 np.sum(inp**2,0)[np.newaxis,:]
-    #distances_sorted = np.sort(self.distances,axis=0)
     distances_sorted = np.partition(self.distances,num_selected,axis=0)
 
     self.selected_neurons = self.distances > distances_sorted[num_selected,:]
@@ -42,7 +38,7 @@ def cluster_select_func(self):
     self.centroids_prime = (np.dot(inp,(~self.selected_neurons).transpose())/ \
                       np.sum(~self.selected_neurons,1)).transpose()
     self.centroids_prime[np.isnan(self.centroids_prime)] = self.centroids[np.isnan(self.centroids_prime)]
-    
+
     if(hasattr(self,'do_weighted_euclidean')):
         self.centroids_prime = self.centroids_prime*self.weights;
 
@@ -52,7 +48,7 @@ def cluster_select_func(self):
 #    print(str(self.output))
 
 def cluster_update_func(self):
-    alpha = self.centroid_speed    
+    alpha = self.centroid_speed*self.zeta 
     self.centroids = self.centroids + alpha*(self.centroids_prime - self.centroids)
     
     #keep a count of the number of times a centroid was selected

@@ -40,6 +40,7 @@ class nnet_qsa(object):
 
         self.do_neuron_clustering=False #by default
         if(p.has_key('cluster_func') and p['cluster_func'] is not None):
+            self.cluster_func = p['cluster_func']
             self.net.layer[0].centroids = np.asarray(((np.random.random((self.net.layer[0].weights.shape)) - 0.5) * 2.5),np.float32)
             #make the centroid bias input match the bias data of 1.0
             self.net.layer[0].centroids[:,-1] = 1.0
@@ -47,12 +48,18 @@ class nnet_qsa(object):
             #print(str(self.net.layer[0].centroids))
             self.net.layer[0].select_func = csf.select_names[p['cluster_func']]
             print('cluster_func: ' + str(csf.select_names[p['cluster_func']]))
-            self.net.layer[0].centroid_speed = p['cluster_speed']
+            self.net.layer[0].centroid_speed = p.get('cluster_speed',1.0)
             self.net.layer[0].num_selected = p['clusters_selected']
             self.do_neuron_clustering=True #set a flag to indicate neuron clustering
             if(p.has_key('do_cosinedistance') and p['do_cosinedistance']):
                 self.net.layer[0].do_cosinedistance = True
                 print('cosine set to true')
+            #decay for balancing learning and moving centroids
+            if(p.has_key('zeta_decay')):
+                self.net.layer[0].zeta_matrix = np.ones(self.net.layer[0].weights.shape,dtype=np.float32)
+                self.net.layer[0].zeta = 1.0
+                self.zeta_decay = p['zeta_decay']
+
         self.max_update = 0.0
         self.grad_clip = p.get('grad_clip',None)
 
@@ -103,7 +110,21 @@ class nnet_qsa(object):
             self.net.error[self.net.error > self.grad_clip] = self.grad_clip
             self.net.error[self.net.error < -self.grad_clip] = -self.grad_clip
         self.net.back_propagate()
-        self.net.update_weights()
+
+        if(hasattr(self.net.layer[0],'zeta')):
+            #decay zeta
+            self.net.layer[0].zeta = self.net.layer[0].zeta*self.zeta_decay
+            self.net.layer[0].zeta_matrix[:] = self.net.layer[0].zeta
+            self.net.layer[0].step_size = (1.0 - self.net.layer[0].zeta_matrix)*alpha
+
+            #weight_1 = np.copy(self.net.layer[0].weights)
+            self.net.update_weights()
+            #weight_2 = np.copy(self.net.layer[0].weights)
+            #print("weight_diff: " +  str(np.sum((weight_1 - weight_2)**2)) + " zeta: " + str(self.net.layer[0].zeta_matrix[0,0]))
+            #move centroids
+            csf.update_names[self.cluster_func](self.net.layer[0])
+        else:
+            self.net.update_weights()
 
         #value = r + gamma*qsa_max
         #thus, net.error = -(r + gamma*qsa_max - qsa)

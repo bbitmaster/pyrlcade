@@ -259,6 +259,8 @@ class rl_runner(object):
                 sys.stdout.write(("ep: %d" % self.episode) + (" epsilon: %2.4f" %self.epsilon) + " total r: " + str(self.r_sum) + (" avg_r: %2.4f" % self.r_sum_avg) + (" total_steps: %d" % self.total_steps) + (" steps/sec: %2.4f" % (1.0/self.avg_step_duration)))
                 if(self.rl_algo == "q_learning_replay"):
                     sys.stdout.write(" r_buf_size: " + str(self.qsa_learner.replay_buff.buf_size))
+                if(type(self.qsa_learner.storage) is nnet_qsa and hasattr(self.qsa_learner.storage.net.layer[0],'zeta')):
+                    sys.stdout.write(" zeta: %2.4f" % self.qsa_learner.storage.net.layer[0].zeta)
                 #TODO: The below line throws a warning when the simulation ends and max_qsa_list is empty, fix this.
                 sys.stdout.write(" avg qsa: " + str(np.mean(np.array(self.max_qsa_list))))
                 print((" Time %d:%02d:%02d" % (h, m, s)))
