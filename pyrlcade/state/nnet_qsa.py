@@ -55,13 +55,20 @@ class nnet_qsa(object):
                 self.net.layer[0].do_cosinedistance = True
                 print('cosine set to true')
             #decay for balancing learning and moving centroids
-            if(p.has_key('zeta_decay')):
+            if(p.has_key('zeta_decay') and p['zeta_decay'] is not None):
                 self.net.layer[0].zeta_matrix = np.ones(self.net.layer[0].weights.shape,dtype=np.float32)
                 self.net.layer[0].zeta = 1.0
                 self.zeta_decay = p['zeta_decay']
 
         self.max_update = 0.0
         self.grad_clip = p.get('grad_clip',None)
+
+        if(p.has_key('_lambda') and p['_lambda'] is not None):
+            self._lambda = p['_lambda']
+            self.gamma = p['gamma']
+            for l in self.net.layer:
+                l.eligibility = l.gradient
+
 
     def store(self,state,action,value):
         s = state
@@ -109,7 +116,25 @@ class nnet_qsa(object):
         if(self.grad_clip is not None):
             self.net.error[self.net.error > self.grad_clip] = self.grad_clip
             self.net.error[self.net.error < -self.grad_clip] = -self.grad_clip
-        self.net.back_propagate()
+
+        #eligibility update
+        if(hasattr(self,'_lambda')):
+            self.net.error = np.ones((1,1),dtype=np.float32)
+            self.net.back_propagate()
+            for l in self.net.layer:
+                l.eligibility = self.gamma*self._lambda*l.eligibility + l.gradient
+                delta_t = -(value - self.net.output)
+                l.gradient = l.eligibility*delta_t
+        else:
+            self.net.error = -(value - self.net.output)
+            #print the largest update so far
+            if(np.max(np.abs(self.net.error)) > np.abs(self.max_update)):
+                self.max_update = np.max(np.abs(self.net.error))
+            #gradient clipping
+            if(self.grad_clip is not None):
+                self.net.error[self.net.error > self.grad_clip] = self.grad_clip
+                self.net.error[self.net.error < -self.grad_clip] = -self.grad_clip
+            self.net.back_propagate()
 
         if(hasattr(self.net.layer[0],'zeta')):
             #decay zeta

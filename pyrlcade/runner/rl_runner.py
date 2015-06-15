@@ -116,6 +116,11 @@ class rl_runner(object):
 
         while 1:
             self.step = 0 
+            #reset eligibility at the beginning of each episode
+            #TODO: This should be abstracted into a function call
+            if(type(self.qsa) is nnet_qsa and hasattr(self.qsa,'_lambda')):
+                for l in self.qsa.net.layer:
+                    l.eligibility = np.zeros(l.eligibility.shape,dtype=np.float32)
             ##initialize s
             self.sim.reset_state()
             self.s = self.state_ram_extractor.extract_state(self.sim.get_state())

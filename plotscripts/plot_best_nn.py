@@ -49,7 +49,7 @@ if __name__ == '__main__':
             #else:
             #print("blah")
             #plot_results(res)
-        plt.legend(plot['legend'],'upper left',prop={'size': 6})
+        plt.legend(plot['legend'],plot.get('location','upper left'),prop={'size': 6})
         plt.axis(plot['axis'])
         if(plot.has_key('title')):
             plt.title(plot['title'])
